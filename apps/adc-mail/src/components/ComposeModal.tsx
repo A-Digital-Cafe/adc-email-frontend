@@ -184,7 +184,7 @@ export function ComposeModal({ draft, onClose, t }: Props) {
 					/>
 				</label>
 
-				<input ref={fileInputRef} type="file" className="hidden" onChange={onFileSelected} aria-hidden="true" />
+				<input ref={fileInputRef} type="file" className="hidden" onChange={onFileSelected} />
 
 				<div className="mt-2 flex items-center justify-end gap-2">
 					<button type="button" disabled={busy} onClick={saveDraft} className="rounded-lg border border-text/20 px-4 py-2">
