@@ -13,7 +13,7 @@ function formatBytes(bytes: number): string {
 	return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
 }
 
-export function QuotaBanner({ account, t }: Props) {
+export function QuotaBanner({ account, t }: Readonly<Props>) {
 	const isOrg = (account.account.scope ?? account.scope) === "org";
 	// El buzón de org descuenta del almacenamiento agregado de la organización;
 	// el personal, de la cuota del usuario.
@@ -33,10 +33,7 @@ export function QuotaBanner({ account, t }: Props) {
 					{t("quota.storage")}: {formatBytes(used)} / {formatBytes(total)}
 				</span>
 				<div className="h-2 w-32 overflow-hidden rounded-full bg-alt">
-					<div
-						className={`h-full ${nearFull ? "bg-danger" : "bg-primary"}`}
-						style={{ width: `${ratio * 100}%` }}
-					/>
+					<div className={`h-full ${nearFull ? "bg-danger" : "bg-primary"}`} style={{ width: `${ratio * 100}%` }} />
 				</div>
 			</div>
 		</div>

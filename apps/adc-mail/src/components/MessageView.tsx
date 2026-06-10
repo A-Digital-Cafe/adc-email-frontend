@@ -15,7 +15,7 @@ function addressLine(list: EmailAddress[]): string {
 	return list.map((a) => (a.name ? `${a.name} <${a.address}>` : a.address)).join(", ");
 }
 
-export function MessageView({ message, onDelete, onStar, t }: Props) {
+export function MessageView({ message, onDelete, onStar, t }: Readonly<Props>) {
 	const [attachments, setAttachments] = useState<MailAttachment[]>([]);
 
 	useEffect(() => {

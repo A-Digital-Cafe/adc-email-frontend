@@ -16,7 +16,7 @@ function parseAddresses(value: string): string[] {
 		.filter(Boolean);
 }
 
-export function ComposeModal({ draft, onClose, t }: Props) {
+export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 	const composerRef = useRef<HTMLElement | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -71,9 +71,17 @@ export function ComposeModal({ draft, onClose, t }: Props) {
 			try {
 				const id = await ensureDraft();
 				if (!id) return;
-				const presign = await mailApi.presignUpload(id, { fileName: file.name, mimeType: file.type || "application/octet-stream", size: file.size });
+				const presign = await mailApi.presignUpload(id, {
+					fileName: file.name,
+					mimeType: file.type || "application/octet-stream",
+					size: file.size,
+				});
 				if (!presign.success || !presign.data) return;
-				const uploaded = await fetch(presign.data.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
+				const uploaded = await fetch(presign.data.uploadUrl, {
+					method: "PUT",
+					body: file,
+					headers: { "Content-Type": file.type || "application/octet-stream" },
+				});
 				if (!uploaded.ok) return;
 				const confirmed = await mailApi.confirmUpload(presign.data.attachmentId);
 				if (confirmed.success && confirmed.data) setAttachments((prev) => [...prev, confirmed.data!]);
@@ -98,7 +106,13 @@ export function ComposeModal({ draft, onClose, t }: Props) {
 	const saveDraft = useCallback(async () => {
 		setBusy(true);
 		try {
-			const payload: Partial<ComposePayload> = { to: parseAddresses(to), subject, bodyHtml, bodyText, attachmentIds: attachments.map((a) => a.id) };
+			const payload: Partial<ComposePayload> = {
+				to: parseAddresses(to),
+				subject,
+				bodyHtml,
+				bodyText,
+				attachmentIds: attachments.map((a) => a.id),
+			};
 			if (draftId) await mailApi.updateDraft(draftId, payload);
 			else await mailApi.createDraft(payload);
 			onClose(false);
@@ -129,7 +143,12 @@ export function ComposeModal({ draft, onClose, t }: Props) {
 	}, [to, subject, bodyHtml, bodyText, attachments, scheduledAt, draftId, draft, onClose]);
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 text-text" role="dialog" aria-modal="true" aria-label={t("compose.title")}>
+		<div
+			className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 text-text"
+			role="dialog"
+			aria-modal="true"
+			aria-label={t("compose.title")}
+		>
 			<div className="flex max-h-[90vh] w-full max-w-2xl flex-col gap-3 overflow-y-auto rounded-xl bg-surface p-5 shadow-xl">
 				<div className="flex items-center justify-between">
 					<h2 className="text-lg font-semibold">{t("compose.title")}</h2>

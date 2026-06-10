@@ -28,7 +28,7 @@ function formatDate(value: string | Date | undefined): string {
 	return sameDay ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString();
 }
 
-export function MessageList({ messages, folder, loading, selectedId, onOpen, onDelete, onStar, t }: Props) {
+export function MessageList({ messages, folder, loading, selectedId, onOpen, onDelete, onStar, t }: Readonly<Props>) {
 	if (loading) {
 		return <div className="p-4 opacity-60">{t("list.loading")}</div>;
 	}
