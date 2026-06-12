@@ -1,0 +1,10 @@
+{
+	"tutorials": [
+		{
+			"slug": "primeros-pasos-con-mail",
+			"title": "Primeros pasos con Mail",
+			"description": "Buzones, redacción con editor enriquecido, adjuntos y envíos programados.",
+			"minutes": 3
+		}
+	]
+}
