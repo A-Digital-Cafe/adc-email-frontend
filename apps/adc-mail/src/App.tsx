@@ -185,60 +185,67 @@ export default function App() {
 
 	return (
 		<adc-layout>
-			<div
-				className={`fixed top-1/2 z-50 -translate-y-1/2 transition-all duration-300 lg:hidden ${
-					sidebarExpanded ? "left-70" : "left-22"
-				}`}
-			>
-				<adc-button-expand ref={buttonRef} isExpanded={sidebarExpanded} />
-			</div>
-
-			<adc-sidebar ref={sidebarRef} items={folderItems} collapsed={!sidebarExpanded} activeItem={folder} title={t("nav.title")}>
-				<button
-					slot="actions"
-					type="button"
-					onClick={handleCompose}
-					className="flex min-w-16 min-h-16 lg:min-h-0 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 font-lg text-tprimary"
+			<div className="flex bg-background">
+				{/* Expand button */}
+				<div
+					className={`
+					fixed top-1/2 z-50 lg:hidden
+					-translate-y-1/2 transition-all duration-300
+					${sidebarExpanded ? "left-70" : "left-22"}
+				`}
 				>
-					<span aria-hidden="true">✉️</span>
-					<span
-						className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
-							sidebarExpanded ? "max-w-40 opacity-100" : "hidden max-w-0 opacity-0"
-						} lg:max-w-40 lg:opacity-100 lg:inline`}
-					>
-						{t("compose.button")}
-					</span>
-				</button>
-			</adc-sidebar>
-
-			<main
-				className={`flex flex-col transition-all duration-300 ${sidebarExpanded ? "lg:ml-74" : "lg:ml-20"}`}
-				style={{ height: "calc(100vh - var(--header-offset))" }}
-			>
-				{account && <QuotaBanner account={account} t={t} />}
-				<div className="flex min-h-0 flex-1">
-					<div className="w-full max-w-md overflow-y-auto border-r border-text/10">
-						<MessageList
-							messages={messages}
-							folder={folder}
-							loading={listLoading}
-							selectedId={selected?.id}
-							onOpen={handleOpenMessage}
-							onDelete={handleDelete}
-							onStar={handleStar}
-							t={t}
-						/>
-					</div>
-					<div className="min-h-0 flex-1 overflow-y-auto">
-						{selected ? (
-							<MessageView message={selected} folder={folder} onDelete={handleDelete} onStar={handleStar} t={t} />
-						) : (
-							<div className="flex h-full items-center justify-center opacity-50">{t("list.empty")}</div>
-						)}
-					</div>
+					<adc-button-expand ref={buttonRef} isExpanded={sidebarExpanded} />
 				</div>
-			</main>
-			{composeOpen && <ComposeModal draft={composeDraft} onClose={handleComposeClose} t={t} />}
+
+				<adc-sidebar ref={sidebarRef} items={folderItems} collapsed={!sidebarExpanded} activeItem={folder} title={t("nav.title")}>
+					<button
+						slot="actions"
+						type="button"
+						onClick={handleCompose}
+						className="flex min-w-16 min-h-16 lg:min-h-0 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 font-lg text-tprimary"
+					>
+						<span aria-hidden="true">✉️</span>
+						<span
+							className={`overflow-hidden whitespace-nowrap transition-all duration-300 ${
+								sidebarExpanded ? "max-w-40 opacity-100" : "hidden max-w-0 opacity-0"
+							} lg:max-w-40 lg:opacity-100 lg:inline`}
+						>
+							{t("compose.button")}
+						</span>
+					</button>
+				</adc-sidebar>
+
+				<main className={`flex-1 transition-all duration-300 ${sidebarExpanded ? "lg:ml-74" : "lg:ml-20"}`}>
+					{/* Offset estándar del sidebar fixed (misma convención que adc-page-shell: pl-25 lg:pl-70).
+					    Despeja el aside fixed para que sidebar | lista | vista queden en horizontal sin solaparse. */}
+					<div className="pl-25 lg:pl-70">
+						{account && <QuotaBanner account={account} t={t} />}
+						<div className="flex min-h-0">
+							<div className="w-full max-w-md overflow-y-auto border-r border-text/10">
+								<MessageList
+									messages={messages}
+									folder={folder}
+									loading={listLoading}
+									selectedId={selected?.id}
+									onOpen={handleOpenMessage}
+									onDelete={handleDelete}
+									onStar={handleStar}
+									t={t}
+								/>
+							</div>
+
+							<div className="flex-1 min-h-0 overflow-y-auto">
+								{selected ? (
+									<MessageView message={selected} folder={folder} onDelete={handleDelete} onStar={handleStar} t={t} />
+								) : (
+									<div className="flex h-full items-center justify-center opacity-50">{t("list.empty")}</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</main>
+				{composeOpen && <ComposeModal draft={composeDraft} onClose={handleComposeClose} t={t} />}
+			</div>
 		</adc-layout>
 	);
 }

@@ -1,6 +1,6 @@
 import { createAdcApi } from "@ui-library/utils/adc-fetch";
 import type { EmailMessage, MailAccount, EmailFolder } from "@common/types/email/Email.ts";
-import type { EmailUserTierLimits, EmailOrgTierLimits } from "@common/types/email/email-tier-limits.ts";
+import type { EmailUserTierLimits, EmailOrgTierLimits } from "@common/types/tiers/email.ts";
 
 const api = createAdcApi({
 	basePath: "/api/email",
