@@ -1,4 +1,5 @@
 import { createAdcApi } from "@ui-library/utils/adc-fetch";
+import { IS_DEV, getDevUrl } from "@common/utils/url-utils.js";
 import type { EmailMessage, MailAccount, EmailFolder } from "@common/types/email/Email.ts";
 import type { EmailUserTierLimits, EmailOrgTierLimits } from "@common/types/tiers/email.ts";
 
@@ -7,6 +8,16 @@ const api = createAdcApi({
 	devPort: 3000,
 	credentials: process.env.NODE_ENV === "development" ? "include" : "same-origin",
 });
+
+/**
+ * Las URLs de descarga pueden ser absolutas (S3 presignado) o relativas a la
+ * plataforma (adjuntos cifrados servidos por el backend). Las relativas se
+ * resuelven contra el origen del API (en dev, puerto 3000).
+ */
+export function resolveDownloadUrl(url: string): string {
+	if (!url.startsWith("/")) return url;
+	return IS_DEV ? getDevUrl(3000, url) : url;
+}
 
 export interface ComposePayload {
 	to: string[];

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { EmailMessage, EmailFolder, EmailAddress } from "@common/types/email/Email.ts";
-import { mailApi, type MailAttachment } from "../utils/mail-api.ts";
+import { mailApi, resolveDownloadUrl, type MailAttachment } from "../utils/mail-api.ts";
 import type { TFn } from "../types.ts";
 
 interface Props {
@@ -34,7 +34,7 @@ export function MessageView({ message, onDelete, onStar, t }: Readonly<Props>) {
 
 	const download = async (att: MailAttachment) => {
 		const res = await mailApi.downloadUrl(att.id);
-		if (res.success && res.data?.url) globalThis.open(res.data.url, "_blank", "noopener");
+		if (res.success && res.data?.url) globalThis.open(resolveDownloadUrl(res.data.url), "_blank", "noopener");
 	};
 
 	return (
