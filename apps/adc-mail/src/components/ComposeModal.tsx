@@ -143,20 +143,8 @@ export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 	}, [to, subject, bodyHtml, bodyText, attachments, scheduledAt, draftId, draft, onClose]);
 
 	return (
-		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 text-text"
-			role="dialog"
-			aria-modal="true"
-			aria-label={t("compose.title")}
-		>
-			<div className="flex max-h-[90vh] w-full max-w-2xl flex-col gap-3 overflow-y-auto rounded-xl bg-surface p-5 shadow-xl">
-				<div className="flex items-center justify-between">
-					<h2 className="text-lg font-semibold">{t("compose.title")}</h2>
-					<button type="button" aria-label={t("actions.close")} onClick={() => onClose(false)}>
-						✕
-					</button>
-				</div>
-
+		<adc-modal open size="lg" modalTitle={t("compose.title")} onadcClose={() => onClose(false)}>
+			<div className="flex flex-col gap-3">
 				<label className="flex flex-col gap-1 text-sm">
 					{t("compose.to")}
 					<input
@@ -204,16 +192,12 @@ export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 				</label>
 
 				<input ref={fileInputRef} type="file" className="hidden" onChange={onFileSelected} />
-
-				<div className="mt-2 flex items-center justify-end gap-2">
-					<button type="button" disabled={busy} onClick={saveDraft} className="rounded-lg border border-text/20 px-4 py-2">
-						{t("compose.saveDraft")}
-					</button>
-					<button type="button" disabled={busy} onClick={send} className="rounded-lg bg-primary px-4 py-2 font-medium text-tprimary">
-						{scheduledAt ? t("compose.scheduleSend") : t("compose.send")}
-					</button>
-				</div>
 			</div>
-		</div>
+
+			<div slot="footer" className="flex items-center justify-end gap-2">
+				<adc-button variant="accent-outlined" size="small" disabled={busy} label={t("compose.saveDraft")} onClick={saveDraft} />
+				<adc-button variant="primary" size="small" disabled={busy} label={scheduledAt ? t("compose.scheduleSend") : t("compose.send")} onClick={send} />
+			</div>
+		</adc-modal>
 	);
 }
