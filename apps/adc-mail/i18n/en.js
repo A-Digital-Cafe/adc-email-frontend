@@ -17,6 +17,7 @@ export default {
 		loading: "Loading messages…",
 		empty: "No messages",
 		noSubject: "(no subject)",
+		open: "Open message: {{subject}}",
 	},
 	view: {
 		from: "From",

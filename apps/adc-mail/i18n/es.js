@@ -17,6 +17,7 @@ export default {
 		loading: "Cargando mensajes…",
 		empty: "No hay mensajes",
 		noSubject: "(sin asunto)",
+		open: "Abrir mensaje: {{subject}}",
 	},
 	view: {
 		from: "De",

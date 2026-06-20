@@ -41,14 +41,14 @@ export function MessageList({ messages, folder, loading, selectedId, onOpen, onD
 				const active = message.id === selectedId;
 				const unread = !message.read && folder !== "drafts";
 				return (
-					<li key={message.id}>
-						<div
-							role="button"
-							tabIndex={0}
+					<li key={message.id} className={`relative ${active ? "bg-alt" : "hover:bg-alt"}`}>
+						<button
+							type="button"
+							aria-label={t("list.open", { subject: message.subject || t("list.noSubject") })}
 							onClick={() => onOpen(message)}
-							onKeyDown={(e) => e.key === "Enter" && onOpen(message)}
-							className={`flex cursor-pointer flex-col gap-1 px-4 py-3 ${active ? "bg-alt" : "hover:bg-alt"}`}
-						>
+							className="absolute inset-0 h-full w-full cursor-pointer"
+						/>
+						<div className="pointer-events-none relative flex flex-col gap-1 px-4 py-3">
 							<div className="flex items-center justify-between gap-2">
 								<span className={`truncate ${unread ? "mail-unread" : ""}`}>{formatAddress(folder, message)}</span>
 								<span className="shrink-0 text-xs opacity-60">
@@ -59,7 +59,7 @@ export function MessageList({ messages, folder, loading, selectedId, onOpen, onD
 								<span className={`truncate text-sm ${unread ? "mail-unread" : "opacity-80"}`}>
 									{message.subject || t("list.noSubject")}
 								</span>
-								<div className="flex shrink-0 items-center gap-2">
+								<div className="pointer-events-auto relative flex shrink-0 items-center gap-2">
 									<button
 										type="button"
 										aria-label={t("actions.star")}
