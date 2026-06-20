@@ -61,12 +61,15 @@ export interface MailAttachment {
 }
 
 export const mailApi = {
-	getAccount: () => api.get<AccountInfo>("/account"),
+	// `silent`: en una cuenta nueva/vacía estos endpoints devuelven 404 esperados.
+	// Sin silenciar, cada uno dispara un toast global ("Recurso no encontrado") y
+	// loadCounts() encadena 5 a la vez. El fallback (null/[]/0) ya cubre el caso.
+	getAccount: () => api.get<AccountInfo>("/account", { silent: true }),
 
 	listFolder: (folder: EmailFolder, params?: { limit?: number; skip?: number; unread?: string; q?: string }) =>
-		api.get<{ folder: EmailFolder; messages: EmailMessage[] }>(`/folders/${folder}/messages`, { params }),
+		api.get<{ folder: EmailFolder; messages: EmailMessage[] }>(`/folders/${folder}/messages`, { params, silent: true }),
 
-	folderCount: (folder: EmailFolder) => api.get<FolderCount>(`/folders/${folder}/count`),
+	folderCount: (folder: EmailFolder) => api.get<FolderCount>(`/folders/${folder}/count`, { silent: true }),
 
 	getMessage: (id: string) => api.get<EmailMessage>(`/messages/${id}`),
 
