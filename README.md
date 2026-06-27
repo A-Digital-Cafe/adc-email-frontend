@@ -1,4 +1,4 @@
-# adc-email-frontend
+# adc-email-frontend [![Security](https://github.com/A-Digital-Cafe/adc-email-frontend/actions/workflows/security.yml/badge.svg)](https://github.com/A-Digital-Cafe/adc-email-frontend/actions/workflows/security.yml)
 
 Preset de frontend para la plataforma de correo ADC.
 
