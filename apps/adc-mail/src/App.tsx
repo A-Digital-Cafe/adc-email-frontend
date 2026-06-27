@@ -216,9 +216,9 @@ export default function App() {
 				</adc-sidebar>
 
 				<main className={`flex-1 transition-all duration-300 ${sidebarExpanded ? "lg:ml-74" : "lg:ml-20"}`}>
-					{/* Offset estándar del sidebar fixed (misma convención que adc-page-shell: pl-25 lg:pl-70).
+					{/* Offset estándar del sidebar fixed (misma convención que adc-page-shell: pl-4 lg:pl-70).
 					    Despeja el aside fixed para que sidebar | lista | vista queden en horizontal sin solaparse. */}
-					<div className="pl-25 lg:pl-70">
+					<div className="pl-4 lg:pl-70">
 						{account && <QuotaBanner account={account} t={t} />}
 						<div className="flex min-h-0">
 							<div className="w-full max-w-md overflow-y-auto border-r border-text/10">
