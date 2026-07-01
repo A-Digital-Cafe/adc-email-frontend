@@ -3,6 +3,7 @@
 		"enableSEO": false,
 		"name": "adc-mail",
 		"uiNamespace": "adc-platform",
+		"uiName": "Correo",
 		"framework": "react",
 		"outputDir": "dist-ui",
 		"isHost": true,
