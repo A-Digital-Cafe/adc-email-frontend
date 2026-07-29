@@ -23,6 +23,9 @@ export default {
 		from: "De",
 		to: "Para",
 		scheduled: "Programado para",
+		previewError: "No se pudo cargar la vista previa.",
+		pdfFallback: "Tu navegador no puede mostrar el PDF incrustado.",
+		download: "Descargar",
 	},
 	actions: {
 		star: "Destacar",
@@ -39,6 +42,8 @@ export default {
 		send: "Enviar",
 		scheduleSend: "Programar",
 		saveDraft: "Guardar borrador",
+		internalOnlyHint: "Por ahora solo puedes enviar a buzones de {{domain}}. Recibir correo de fuera sí funciona.",
+		externalBlocked: "El envío a direcciones externas está deshabilitado: {{addresses}}",
 	},
 	quota: {
 		storage: "Almacenamiento",
@@ -57,6 +62,8 @@ export default {
 		QUOTA_EXCEEDED: "Has superado tu cuota de correo.",
 		STORAGE_FULL: "Almacenamiento de correo lleno.",
 		TOO_MANY_RECIPIENTS: "Demasiados destinatarios.",
+		EXTERNAL_SEND_DISABLED: "El envío a direcciones externas está deshabilitado.",
+		RECIPIENT_NOT_FOUND: "No existe ningún buzón con esa dirección.",
 		TOO_MANY_SCHEDULED: "Demasiados envíos programados.",
 		TRANSPORT_UNAVAILABLE: "El servicio de correo no está disponible en este momento.",
 		ATTACHMENTS_UNAVAILABLE: "Los adjuntos no están disponibles en este momento.",

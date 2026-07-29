@@ -19,6 +19,11 @@ export function resolveDownloadUrl(url: string): string {
 	return IS_DEV ? getDevUrl(3000, url) : url;
 }
 
+/**
+ * Payload de composición tal como lo maneja la UI: los destinatarios son
+ * strings sueltos. La API los exige como objetos `{ address }`, así que la
+ * conversión se hace acá (`#withAddresses`) y no en cada componente.
+ */
 export interface ComposePayload {
 	to: string[];
 	cc?: string[];
@@ -38,7 +43,18 @@ export interface FolderCount {
 	unread: number;
 }
 
+/**
+ * Política de entrega del servidor. Con `internalOnly` sólo se puede enviar a
+ * buzones de la plataforma (`rootDomain` y sus subdominios de organización);
+ * recibir correo de fuera sigue funcionando.
+ */
+export interface MailPolicy {
+	internalOnly: boolean;
+	rootDomain: string;
+}
+
 export interface AccountInfo {
+	policy: MailPolicy;
 	account: MailAccount;
 	scope: "user" | "org";
 	orgStorageUsedBytes: number;
@@ -58,6 +74,16 @@ export interface MailAttachment {
 	mimeType: string;
 	size: number;
 	status: string;
+}
+
+/** Convierte los destinatarios de string a `{ address }`, que es lo que valida la API. */
+function withAddresses(data: Partial<ComposePayload>): Record<string, unknown> {
+	const toObjects = (list?: string[]) => list?.map((address) => ({ address }));
+	const mapped: Record<string, unknown> = { ...data };
+	for (const field of ["to", "cc", "bcc"] as const) {
+		if (data[field]) mapped[field] = toObjects(data[field]);
+	}
+	return mapped;
 }
 
 export const mailApi = {
@@ -83,22 +109,36 @@ export const mailApi = {
 
 	listDrafts: () => api.get<{ folder: EmailFolder; messages: EmailMessage[] }>("/drafts"),
 
-	createDraft: (data: Partial<ComposePayload>) => api.post<EmailMessage>("/drafts", { body: data }),
+	// Crea un documento nuevo por llamada: mantiene idempotencia para que un reintento
+	// de red no deje dos borradores. `t` la hace única por invocación intencional.
+	createDraft: (data: Partial<ComposePayload>) =>
+		api.post<EmailMessage>("/drafts", { body: withAddresses(data), idempotencyData: { action: "create-draft", t: Date.now() } }),
 
-	updateDraft: (id: string, data: Partial<ComposePayload>) => api.put<EmailMessage>(`/drafts/${id}`, { body: data }),
+	updateDraft: (id: string, data: Partial<ComposePayload>) => api.put<EmailMessage>(`/drafts/${id}`, { body: withAddresses(data) }),
 
 	send: (data: ComposePayload) =>
 		api.post<{ id: string; status: string; scheduledAt?: string }>("/send", {
-			body: data,
+			body: withAddresses(data),
 			idempotencyData: data,
 		}),
 
 	listDraftAttachments: (draftId: string) => api.get<MailAttachment[]>(`/drafts/${draftId}/attachments`),
 
+	// Cada presign registra un adjunto nuevo; subir dos veces el mismo archivo es
+	// legítimo, así que la clave se distingue por invocación.
 	presignUpload: (draftId: string, file: { fileName: string; mimeType: string; size: number }) =>
-		api.post<PresignResult>("/attachments/presign-upload", { body: { draftId, ...file } }),
+		api.post<PresignResult>("/attachments/presign-upload", {
+			body: { draftId, ...file },
+			idempotencyData: { action: "presign-upload", draftId, ...file, t: Date.now() },
+		}),
 
-	confirmUpload: (attachmentId: string) => api.post<MailAttachment>(`/attachments/${attachmentId}/confirm`),
+	// Clave determinista a propósito: el endpoint suma `att.size` al almacenamiento
+	// en cada confirm, así que un reintento debe replayear la respuesta cacheada en
+	// vez de volver a contar la cuota.
+	confirmUpload: (attachmentId: string) =>
+		api.post<MailAttachment>(`/attachments/${attachmentId}/confirm`, {
+			idempotencyData: { action: "confirm-upload", attachmentId },
+		}),
 
 	downloadUrl: (attachmentId: string) => api.get<{ url: string }>(`/attachments/${attachmentId}/download`),
 

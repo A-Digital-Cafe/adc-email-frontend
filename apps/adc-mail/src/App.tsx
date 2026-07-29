@@ -244,7 +244,7 @@ export default function App() {
 						</div>
 					</div>
 				</main>
-				{composeOpen && <ComposeModal draft={composeDraft} onClose={handleComposeClose} t={t} />}
+				{composeOpen && <ComposeModal draft={composeDraft} policy={account?.policy ?? null} onClose={handleComposeClose} t={t} />}
 			</div>
 		</adc-layout>
 	);

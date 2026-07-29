@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { EmailMessage } from "@common/types/email/Email.ts";
-import { mailApi, type ComposePayload, type MailAttachment } from "../utils/mail-api.ts";
+import { isInternalAddress, isValidEmailAddress } from "@common/utils/email-address.ts";
+import { mailApi, type ComposePayload, type MailAttachment, type MailPolicy } from "../utils/mail-api.ts";
 import type { TFn } from "../types.ts";
 
 interface Props {
 	draft: EmailMessage | null;
+	/** Política de entrega del servidor; `null` mientras la cuenta no cargó. */
+	policy: MailPolicy | null;
 	onClose: (didSend: boolean) => void;
 	t: TFn;
 }
@@ -16,7 +19,7 @@ function parseAddresses(value: string): string[] {
 		.filter(Boolean);
 }
 
-export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
+export function ComposeModal({ draft, policy, onClose, t }: Readonly<Props>) {
 	const composerRef = useRef<HTMLElement | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -28,6 +31,16 @@ export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 	const [scheduledAt, setScheduledAt] = useState("");
 	const [attachments, setAttachments] = useState<MailAttachment[]>([]);
 	const [busy, setBusy] = useState(false);
+
+	// El envío externo está deshabilitado en el servidor: se avisa acá para no
+	// redactar un mensaje entero y chocar recién al enviar. El backend valida
+	// igual (esto es sólo UX) y además comprueba que el buzón exista.
+	const blockedRecipients = useMemo(() => {
+		if (!policy?.internalOnly) return [];
+		// Sólo direcciones ya completas: si no, se marcaría en rojo mientras se
+		// teclea el dominio. Las malformadas las rechaza el backend (INVALID_ADDRESS).
+		return parseAddresses(to).filter((address) => isValidEmailAddress(address) && !isInternalAddress(address, policy.rootDomain));
+	}, [to, policy]);
 
 	useEffect(() => {
 		if (draft?.id && draft.attachmentIds?.length) {
@@ -123,7 +136,7 @@ export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 
 	const send = useCallback(async () => {
 		const recipients = parseAddresses(to);
-		if (recipients.length === 0) return;
+		if (recipients.length === 0 || blockedRecipients.length > 0) return;
 		setBusy(true);
 		try {
 			const payload: ComposePayload = {
@@ -140,7 +153,7 @@ export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 		} finally {
 			setBusy(false);
 		}
-	}, [to, subject, bodyHtml, bodyText, attachments, scheduledAt, draftId, draft, onClose]);
+	}, [to, blockedRecipients, subject, bodyHtml, bodyText, attachments, scheduledAt, draftId, draft, onClose]);
 
 	return (
 		<adc-modal open size="lg" modalTitle={t("compose.title")} onadcClose={() => onClose(false)}>
@@ -151,9 +164,16 @@ export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 						type="text"
 						value={to}
 						onChange={(e) => setTo(e.target.value)}
-						placeholder="alguien@ejemplo.com"
-						className="rounded-lg border border-text/15 px-3 py-2"
+						placeholder={policy?.internalOnly ? `alguien@${policy.rootDomain}` : "alguien@ejemplo.com"}
+						aria-invalid={blockedRecipients.length > 0}
+						aria-describedby="compose-to-help"
+						className={`rounded-lg border px-3 py-2 ${blockedRecipients.length > 0 ? "border-danger" : "border-text/15"}`}
 					/>
+					<span id="compose-to-help" className={blockedRecipients.length > 0 ? "text-sm text-danger" : "text-xs opacity-70"}>
+						{blockedRecipients.length > 0
+							? t("compose.externalBlocked", { addresses: blockedRecipients.join(", ") })
+							: policy?.internalOnly && t("compose.internalOnlyHint", { domain: policy.rootDomain })}
+					</span>
 				</label>
 
 				<label className="flex flex-col gap-1 text-sm">
@@ -196,7 +216,13 @@ export function ComposeModal({ draft, onClose, t }: Readonly<Props>) {
 
 			<div slot="footer" className="flex items-center justify-end gap-2">
 				<adc-button variant="accent-outlined" size="small" disabled={busy} label={t("compose.saveDraft")} onClick={saveDraft} />
-				<adc-button variant="primary" size="small" disabled={busy} label={scheduledAt ? t("compose.scheduleSend") : t("compose.send")} onClick={send} />
+				<adc-button
+					variant="primary"
+					size="small"
+					disabled={busy || blockedRecipients.length > 0}
+					label={scheduledAt ? t("compose.scheduleSend") : t("compose.send")}
+					onClick={send}
+				/>
 			</div>
 		</adc-modal>
 	);

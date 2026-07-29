@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { EmailMessage, EmailFolder, EmailAddress } from "@common/types/email/Email.ts";
 import { mailApi, resolveDownloadUrl, type MailAttachment } from "../utils/mail-api.ts";
+import { AttachmentPreviewModal, attachmentPreviewKind } from "./AttachmentPreviewModal.tsx";
 import type { TFn } from "../types.ts";
 
 interface Props {
@@ -17,6 +18,7 @@ function addressLine(list: EmailAddress[]): string {
 
 export function MessageView({ message, onDelete, onStar, t }: Readonly<Props>) {
 	const [attachments, setAttachments] = useState<MailAttachment[]>([]);
+	const [preview, setPreview] = useState<MailAttachment | null>(null);
 
 	useEffect(() => {
 		let active = true;
@@ -68,19 +70,36 @@ export function MessageView({ message, onDelete, onStar, t }: Readonly<Props>) {
 
 			{attachments.length > 0 && (
 				<section className="flex flex-wrap gap-2 border-t border-text/10 pt-3">
-					{attachments.map((att) => (
-						<button
-							key={att.id}
-							type="button"
-							onClick={() => download(att)}
-							className="flex items-center gap-2 rounded-lg border border-text/15 px-3 py-1.5 text-sm"
-						>
-							<span aria-hidden="true">📎</span>
-							{att.fileName}
-						</button>
-					))}
+					{attachments.map((att) => {
+						const previewable = attachmentPreviewKind(att.mimeType) !== null;
+						return (
+							<span key={att.id} className="flex items-center rounded-lg border border-text/15 text-sm">
+								<button
+									type="button"
+									onClick={() => (previewable ? setPreview(att) : download(att))}
+									className="flex items-center gap-2 px-3 py-1.5"
+								>
+									<span aria-hidden="true">📎</span>
+									{att.fileName}
+								</button>
+								{previewable && (
+									<button
+										type="button"
+										aria-label={t("view.download")}
+										title={t("view.download")}
+										onClick={() => download(att)}
+										className="px-2 py-1.5 border-l border-text/15 opacity-70 hover:opacity-100"
+									>
+										⭳
+									</button>
+								)}
+							</span>
+						);
+					})}
 				</section>
 			)}
+
+			{preview && <AttachmentPreviewModal attachment={preview} onClose={() => setPreview(null)} t={t} />}
 		</article>
 	);
 }

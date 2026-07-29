@@ -23,6 +23,9 @@ export default {
 		from: "From",
 		to: "To",
 		scheduled: "Scheduled for",
+		previewError: "The preview could not be loaded.",
+		pdfFallback: "Your browser cannot display the embedded PDF.",
+		download: "Download",
 	},
 	actions: {
 		star: "Star",
@@ -39,6 +42,8 @@ export default {
 		send: "Send",
 		scheduleSend: "Schedule",
 		saveDraft: "Save draft",
+		internalOnlyHint: "For now you can only send to {{domain}} mailboxes. Receiving mail from outside does work.",
+		externalBlocked: "Sending to external addresses is disabled: {{addresses}}",
 	},
 	quota: {
 		storage: "Storage",
@@ -57,6 +62,8 @@ export default {
 		QUOTA_EXCEEDED: "You have exceeded your mail quota.",
 		STORAGE_FULL: "Mail storage is full.",
 		TOO_MANY_RECIPIENTS: "Too many recipients.",
+		EXTERNAL_SEND_DISABLED: "Sending to external addresses is disabled.",
+		RECIPIENT_NOT_FOUND: "No mailbox exists with that address.",
 		TOO_MANY_SCHEDULED: "Too many scheduled messages.",
 		TRANSPORT_UNAVAILABLE: "The mail service is currently unavailable.",
 		ATTACHMENTS_UNAVAILABLE: "Attachments are currently unavailable.",
