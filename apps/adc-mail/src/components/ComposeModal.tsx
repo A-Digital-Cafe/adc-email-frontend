@@ -90,10 +90,12 @@ export function ComposeModal({ draft, policy, onClose, t }: Readonly<Props>) {
 					size: file.size,
 				});
 				if (!presign.success || !presign.data) return;
+				// Los headers salen del presign tal cual: algunos van firmados (Content-Disposition),
+				// así que armarlos a mano rompe la firma.
 				const uploaded = await fetch(presign.data.uploadUrl, {
 					method: "PUT",
 					body: file,
-					headers: { "Content-Type": file.type || "application/octet-stream" },
+					headers: presign.data.headers,
 				});
 				if (!uploaded.ok) return;
 				const confirmed = await mailApi.confirmUpload(presign.data.attachmentId);

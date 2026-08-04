@@ -65,6 +65,8 @@ export interface AccountInfo {
 export interface PresignResult {
 	attachmentId: string;
 	uploadUrl: string;
+	/** Cabeceras obligatorias del PUT: algunas van firmadas, se mandan tal cual. */
+	headers: Record<string, string>;
 	fields?: Record<string, string>;
 }
 
