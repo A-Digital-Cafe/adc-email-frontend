@@ -6,7 +6,6 @@ import type { EmailUserTierLimits, EmailOrgTierLimits } from "@common/types/tier
 const api = createAdcApi({
 	basePath: "/api/email",
 	devPort: 3000,
-	credentials: process.env.NODE_ENV === "development" ? "include" : "same-origin",
 });
 
 /**
