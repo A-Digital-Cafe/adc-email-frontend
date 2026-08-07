@@ -22,6 +22,7 @@ export default {
 	view: {
 		from: "De",
 		to: "Para",
+		noSelection: "Selecciona un mensaje para leerlo",
 		scheduled: "Programado para",
 		previewError: "No se pudo cargar la vista previa.",
 		pdfFallback: "Tu navegador no puede mostrar el PDF incrustado.",
@@ -31,6 +32,7 @@ export default {
 		star: "Destacar",
 		delete: "Eliminar",
 		close: "Cerrar",
+		back: "Volver a la lista",
 	},
 	compose: {
 		button: "Redactar",

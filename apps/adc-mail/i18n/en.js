@@ -22,6 +22,7 @@ export default {
 	view: {
 		from: "From",
 		to: "To",
+		noSelection: "Select a message to read it",
 		scheduled: "Scheduled for",
 		previewError: "The preview could not be loaded.",
 		pdfFallback: "Your browser cannot display the embedded PDF.",
@@ -31,6 +32,7 @@ export default {
 		star: "Star",
 		delete: "Delete",
 		close: "Close",
+		back: "Back to list",
 	},
 	compose: {
 		button: "Compose",

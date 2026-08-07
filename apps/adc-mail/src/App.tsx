@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "@ui-library/utils/i18n-react";
 import { getSession } from "@ui-library/utils/session";
 import { clearErrors } from "@ui-library/utils/adc-fetch";
+import { useIsCompact } from "@ui-library/utils/use-media-query";
 import type { EmailMessage, EmailFolder } from "@common/types/email/Email.ts";
 import { mailApi, type AccountInfo } from "./utils/mail-api.ts";
 import { MessageList } from "./components/MessageList.tsx";
@@ -35,6 +36,10 @@ export default function App() {
 	const [sidebarExpanded, setSidebarExpanded] = useState(false);
 	const sidebarRef = useRef<HTMLElement>(null);
 	const buttonRef = useRef<HTMLElement>(null);
+	// Por debajo de `lg` no hay espacio para lista + lectura en paralelo: la lista
+	// ocupa el ancho completo y el mensaje se abre en un modal a pantalla completa.
+	const compact = useIsCompact();
+	const [sidebarOffset, setSidebarOffset] = useState(0);
 
 	const loadCounts = useCallback(async () => {
 		const entries = await Promise.all(
@@ -102,23 +107,51 @@ export default function App() {
 		};
 	}, [ready, loading, unauthorized, handleSidebarItemClick, handleExpandToggle]);
 
+	// El aside de `adc-sidebar` es `w-max`: su ancho depende del rótulo más largo
+	// (y del idioma), así que un offset fijo en rem lo tapa o deja un hueco. Se
+	// mide el elemento real y se sigue midiendo si cambia (rotar, cambiar idioma).
+	useEffect(() => {
+		if (compact || !ready || loading || unauthorized) return;
+		const host = sidebarRef.current;
+		if (!host) return;
+		let observer: ResizeObserver | undefined;
+		let cancelled = false;
+		// `componentOnReady`: el aside es DOM ligero que Stencil pinta después de
+		// hidratar, así que buscarlo en el mismo tick devuelve null.
+		(host as HTMLElement & { componentOnReady?: () => Promise<unknown> }).componentOnReady?.().then(() => {
+			const aside = host.querySelector("aside");
+			if (cancelled || !aside) return;
+			observer = new ResizeObserver(() => setSidebarOffset(aside.getBoundingClientRect().width));
+			observer.observe(aside);
+		});
+		return () => {
+			cancelled = true;
+			observer?.disconnect();
+		};
+	}, [compact, ready, loading, unauthorized]);
+
 	const handleOpenMessage = useCallback(
 		async (message: EmailMessage) => {
 			const res = await mailApi.getMessage(message.id);
 			const full = res.success && res.data ? res.data : message;
+			// Un borrador se edita: abrir además la vista de lectura dejaría dos
+			// capas superpuestas (en compacto, dos pantallas completas).
+			if (full.folder === "drafts") {
+				setComposeDraft(full);
+				setComposeOpen(true);
+				return;
+			}
 			setSelected(full);
-			if (!full.read && full.folder !== "drafts") {
+			if (!full.read) {
 				await mailApi.setRead(full.id, true);
 				setMessages((prev) => prev.map((m) => (m.id === full.id ? { ...m, read: true } : m)));
 				loadCounts();
 			}
-			if (full.folder === "drafts") {
-				setComposeDraft(full);
-				setComposeOpen(true);
-			}
 		},
 		[loadCounts]
 	);
+
+	const handleCloseSelected = useCallback(() => setSelected(null), []);
 
 	const handleDelete = useCallback(
 		async (message: EmailMessage) => {
@@ -184,14 +217,26 @@ export default function App() {
 	}));
 
 	return (
-		<adc-layout>
+		// `fullWidth`: sin él el contenedor de `adc-layout` es `xl:w-max` (se ajusta al
+		// contenido), así que una línea larga de un correo ensancha la página entera.
+		<adc-layout fullWidth>
 			<div className="flex bg-background">
+				{/* Backdrop del drawer: en mobile el sidebar se superpone al contenido. */}
+				{sidebarExpanded && (
+					<button
+						type="button"
+						aria-label={t("actions.close")}
+						className="fixed inset-0 z-10 bg-black/40 lg:hidden"
+						onClick={() => setSidebarExpanded(false)}
+					/>
+				)}
+
 				{/* Expand button */}
 				<div
 					className={`
 					fixed top-1/2 z-50 lg:hidden
 					-translate-y-1/2 transition-all duration-300
-					${sidebarExpanded ? "left-70" : "left-22"}
+					${sidebarExpanded ? "left-70" : "left-5"}
 				`}
 				>
 					<adc-button-expand ref={buttonRef} isExpanded={sidebarExpanded} />
@@ -215,13 +260,15 @@ export default function App() {
 					</button>
 				</adc-sidebar>
 
-				<main className={`flex-1 transition-all duration-300 ${sidebarExpanded ? "lg:ml-74" : "lg:ml-20"}`}>
-					{/* Offset estándar del sidebar fixed (misma convención que adc-page-shell: pl-4 lg:pl-70).
-					    Despeja el aside fixed para que sidebar | lista | vista queden en horizontal sin solaparse. */}
-					<div className="pl-4 lg:pl-70">
+				<main className="min-w-0 flex-1">
+					{/* Despeja el aside fixed para que sidebar | lista | vista queden en horizontal sin
+					    solaparse: `lg:pl-70` (la convención de adc-page-shell) es el valor de arranque y
+					    el ancho medido lo corrige. En mobile el aside es un drawer superpuesto, así que
+					    sólo aplica el padding base. */}
+					<div className="pl-4 lg:pl-70" style={!compact && sidebarOffset ? { paddingLeft: sidebarOffset } : undefined}>
 						{account && <QuotaBanner account={account} t={t} />}
 						<div className="flex min-h-0">
-							<div className="w-full max-w-md overflow-y-auto border-r border-text/10">
+							<div className="w-full min-w-0 overflow-y-auto lg:max-w-md lg:border-r lg:border-text/10">
 								<MessageList
 									messages={messages}
 									folder={folder}
@@ -234,16 +281,39 @@ export default function App() {
 								/>
 							</div>
 
-							<div className="flex-1 min-h-0 overflow-y-auto">
-								{selected ? (
-									<MessageView message={selected} folder={folder} onDelete={handleDelete} onStar={handleStar} t={t} />
-								) : (
-									<div className="flex h-full items-center justify-center opacity-50">{t("list.empty")}</div>
-								)}
-							</div>
+							{/* En compacto la lectura vive en el modal de abajo, no en un panel lateral.
+							    `min-w-0`: sin eso el flex item se ensancha hasta el contenido (un correo
+							    con líneas largas) y la página entera desborda en horizontal. */}
+							{!compact && (
+								<div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+									{selected ? (
+										<MessageView message={selected} folder={folder} onDelete={handleDelete} onStar={handleStar} t={t} />
+									) : (
+										<div className="flex h-full items-center justify-center opacity-50">{t("view.noSelection")}</div>
+									)}
+								</div>
+							)}
 						</div>
 					</div>
 				</main>
+				{compact && selected && (
+					<adc-modal
+						open
+						size="full"
+						hideChrome
+						modalTitle={selected.subject || t("list.noSubject")}
+						onadcClose={handleCloseSelected}
+					>
+						<MessageView
+							message={selected}
+							folder={folder}
+							onDelete={handleDelete}
+							onStar={handleStar}
+							onBack={handleCloseSelected}
+							t={t}
+						/>
+					</adc-modal>
+				)}
 				{composeOpen && <ComposeModal draft={composeDraft} policy={account?.policy ?? null} onClose={handleComposeClose} t={t} />}
 			</div>
 		</adc-layout>

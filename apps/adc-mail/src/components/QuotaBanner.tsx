@@ -22,17 +22,19 @@ export function QuotaBanner({ account, t }: Readonly<Props>) {
 	const ratio = Math.min(1, used / total);
 	const nearFull = ratio >= 0.85;
 
+	// En pantallas angostas la dirección y la cuota se apilan: en una sola fila
+	// la barra de progreso queda fuera del viewport.
 	return (
-		<div className="flex items-center justify-between gap-4 border-b border-text/10 px-4 py-2 text-sm">
-			<div className="flex items-center gap-2">
+		<div className="flex flex-col gap-1 border-b border-text/10 px-4 py-2 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+			<div className="flex min-w-0 items-center gap-2">
 				<adc-icon-app-mail size="1.25rem" />
-				<span className="font-medium">{account.account.address}</span>
+				<span className="truncate font-medium">{account.account.address}</span>
 			</div>
-			<div className="flex items-center gap-2">
-				<span className={nearFull ? "text-danger" : "opacity-70"}>
+			<div className="flex min-w-0 items-center gap-2">
+				<span className={`truncate ${nearFull ? "text-danger" : "opacity-70"}`}>
 					{t("quota.storage")}: {formatBytes(used)} / {formatBytes(total)}
 				</span>
-				<div className="h-2 w-32 overflow-hidden rounded-full bg-alt">
+				<div className="h-2 w-20 shrink-0 overflow-hidden rounded-full bg-alt sm:w-32">
 					<div className={`h-full ${nearFull ? "bg-danger" : "bg-primary"}`} style={{ width: `${ratio * 100}%` }} />
 				</div>
 			</div>

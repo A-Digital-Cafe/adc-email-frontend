@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIsCompact } from "@ui-library/utils/use-media-query";
 import { mailApi, resolveDownloadUrl, type MailAttachment } from "../utils/mail-api.ts";
 import type { TFn } from "../types.ts";
 
@@ -30,6 +31,7 @@ export function AttachmentPreviewModal({ attachment, onClose, t }: Readonly<Prop
 	const [text, setText] = useState<string | null>(null);
 	const [failed, setFailed] = useState(false);
 	const kind = attachmentPreviewKind(attachment.mimeType);
+	const compact = useIsCompact();
 
 	useEffect(() => {
 		let cancelled = false;
@@ -83,7 +85,7 @@ export function AttachmentPreviewModal({ attachment, onClose, t }: Readonly<Prop
 	}
 
 	return (
-		<adc-modal open modalTitle={attachment.fileName} size="lg2" onadcClose={onClose}>
+		<adc-modal open modalTitle={attachment.fileName} size={compact ? "full" : "lg2"} onadcClose={onClose}>
 			<div className="flex flex-col gap-3 p-2">{body}</div>
 		</adc-modal>
 	);

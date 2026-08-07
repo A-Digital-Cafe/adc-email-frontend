@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { EmailMessage } from "@common/types/email/Email.ts";
 import { isInternalAddress, isValidEmailAddress } from "@common/utils/email-address.ts";
+import { useIsCompact } from "@ui-library/utils/use-media-query";
 import { mailApi, type ComposePayload, type MailAttachment, type MailPolicy } from "../utils/mail-api.ts";
 import type { TFn } from "../types.ts";
 
@@ -22,6 +23,9 @@ function parseAddresses(value: string): string[] {
 export function ComposeModal({ draft, policy, onClose, t }: Readonly<Props>) {
 	const composerRef = useRef<HTMLElement | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
+	// Redactar en un modal centrado no entra en mobile (editor + adjuntos + teclado):
+	// a pantalla completa el cuerpo scrollea y la barra de acciones queda fija abajo.
+	const compact = useIsCompact();
 
 	const [draftId, setDraftId] = useState<string | null>(draft?.id ?? null);
 	const [to, setTo] = useState((draft?.to ?? []).map((a) => a.address).join(", "));
@@ -158,7 +162,7 @@ export function ComposeModal({ draft, policy, onClose, t }: Readonly<Props>) {
 	}, [to, blockedRecipients, subject, bodyHtml, bodyText, attachments, scheduledAt, draftId, draft, onClose]);
 
 	return (
-		<adc-modal open size="lg" modalTitle={t("compose.title")} onadcClose={() => onClose(false)}>
+		<adc-modal open size={compact ? "full" : "lg"} modalTitle={t("compose.title")} onadcClose={() => onClose(false)}>
 			<div className="flex flex-col gap-3">
 				<label className="flex flex-col gap-1 text-sm">
 					{t("compose.to")}

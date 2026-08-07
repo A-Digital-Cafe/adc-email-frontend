@@ -76,7 +76,7 @@ export function MessageList({ messages, folder, loading, selectedId, onOpen, onD
 										aria-label={t("actions.star")}
 										aria-pressed={message.starred ? "true" : "false"}
 										title={t("actions.star")}
-										className={`inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-text/10 ${
+										className={`inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full hover:bg-text/10 lg:h-8 lg:w-8 ${
 											message.starred ? "text-warn" : "text-muted"
 										}`}
 										onClick={(e) => {
@@ -102,7 +102,7 @@ export function MessageList({ messages, folder, loading, selectedId, onOpen, onD
 										type="button"
 										aria-label={t("actions.delete")}
 										title={t("actions.delete")}
-										className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-danger"
+										className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-danger lg:h-8 lg:w-8"
 										onClick={(e) => {
 											e.stopPropagation();
 											onDelete(message);
