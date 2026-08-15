@@ -21,7 +21,7 @@
 		"hosting": [
 			{
 				"domains": ["adigitalcafe.com"],
-				"subdomains": ["mail"]
+				"subdomains": ["email"]
 			}
 		],
 		"federationExposes": {
