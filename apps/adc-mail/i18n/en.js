@@ -2,9 +2,21 @@ export default {
 	nav: {
 		title: "Mail",
 	},
-	auth: {
-		title: "Sign in to view your mail",
-		subtitle: "You need an active session to access your mailbox.",
+	landing: {
+		title: "Mail",
+		subtitle: "Your organization's mailbox inside Abby's Digital Cafe: write, attach and organize without leaving the platform.",
+		signIn: "Sign in",
+		accountNote: "Your organization enables the mailbox: if you don't have one yet, request it from Org Requests.",
+		heroAria: "Introduction to Mail",
+		featuresAria: "What you can do",
+		howAria: "How to start",
+		howTitle: "How to start",
+		features: {
+			mailboxes: { title: "Full mailboxes", body: "Inbox, sent, drafts, spam and trash, with unread counts per folder." },
+			compose: { title: "Rich composing", body: "Rich text editor and scheduled sending for later." },
+			attachments: { title: "Attachments made easy", body: "Upload files and preview them from the message itself." },
+			domain: { title: "With your domain", body: "Addresses on your organization's domain and storage based on your plan." },
+		},
 	},
 	folders: {
 		inbox: "Inbox",

@@ -2,9 +2,21 @@ export default {
 	nav: {
 		title: "Correo",
 	},
-	auth: {
-		title: "Inicia sesión para ver tu correo",
-		subtitle: "Necesitas una sesión activa para acceder a tu buzón.",
+	landing: {
+		title: "Correo",
+		subtitle: "El buzón de tu organización dentro de Abby's Digital Cafe: escribí, adjuntá y organizá sin salir de la plataforma.",
+		signIn: "Iniciar sesión",
+		accountNote: "La casilla la habilita tu organización: si todavía no tenés una, pedila desde Org Requests.",
+		heroAria: "Introducción a Correo",
+		featuresAria: "Qué podés hacer",
+		howAria: "Cómo empezar",
+		howTitle: "Cómo empezar",
+		features: {
+			mailboxes: { title: "Buzones completos", body: "Entrada, enviados, borradores, spam y papelera, con no leídos por carpeta." },
+			compose: { title: "Redacción rica", body: "Editor de texto enriquecido y envíos programados para más adelante." },
+			attachments: { title: "Adjuntos sin vueltas", body: "Subí archivos y previsualizalos desde el mismo mensaje." },
+			domain: { title: "Con tu dominio", body: "Direcciones del dominio de tu organización y almacenamiento según tu plan." },
+		},
 	},
 	folders: {
 		inbox: "Bandeja de entrada",

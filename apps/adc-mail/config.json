@@ -1,6 +1,6 @@
 {
 	"uiModule": {
-		"enableSEO": false,
+		"enableSEO": true,
 		"name": "adc-mail",
 		"uiNamespace": "adc-platform",
 		"uiName": "Correo",
@@ -36,6 +36,11 @@
 		{
 			"name": "IdentityManagerService",
 			"version": "latest"
+		},
+		{
+			"name": "SEOService",
+			"version": "latest",
+			"optional": true
 		}
 	]
 }

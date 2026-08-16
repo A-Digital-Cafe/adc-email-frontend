@@ -10,6 +10,7 @@ import { MessageList } from "./components/MessageList.tsx";
 import { MessageView } from "./components/MessageView.tsx";
 import { ComposeModal } from "./components/ComposeModal.tsx";
 import { QuotaBanner } from "./components/QuotaBanner.tsx";
+import LandingView from "./pages/LandingView.tsx";
 
 const FOLDERS: EmailFolder[] = ["inbox", "sent", "drafts", "spam", "trash"];
 
@@ -200,10 +201,11 @@ export default function App() {
 	if (unauthorized) {
 		return (
 			<adc-layout>
-				<div className="flex h-screen flex-col items-center justify-center gap-3 text-center">
-					<adc-icon-app-mail size="3rem" />
-					<h1 className="text-xl font-semibold">{t("auth.title")}</h1>
-					<p className="opacity-70">{t("auth.subtitle")}</p>
+				{/* Mismo `div` envolvente que las otras ramas: `adc-layout` reubica sus slotted children,
+				    así que cambiar el TIPO del hijo directo entre renders hace fallar el removeChild de
+				    React y se desmonta el árbol entero. Ver docs/architecture/ui-federation.md. */}
+				<div className="flex min-h-screen flex-col">
+					<LandingView />
 				</div>
 			</adc-layout>
 		);
