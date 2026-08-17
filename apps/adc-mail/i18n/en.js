@@ -1,6 +1,7 @@
 export default {
 	nav: {
 		title: "Mail",
+		menu: "Mail menu",
 	},
 	landing: {
 		title: "Mail",
@@ -45,6 +46,43 @@ export default {
 		delete: "Delete",
 		close: "Close",
 		back: "Back to list",
+		markSpam: "Mark as spam",
+		notSpam: "Not spam",
+	},
+	spam: {
+		reason: {
+			blockedByYou: "It's in Spam because you blocked this sender.",
+			blockedByPlatform: "It's in Spam because the platform blocked this sender.",
+			detected: "We flagged it as spam based on its sender and authentication.",
+			unknown: "It's in Spam.",
+		},
+		recover: "If it looks legitimate, move it back to your inbox.",
+	},
+	blocklist: {
+		navTitle: "Blocked senders",
+		title: "Blocked senders",
+		description: "Anything from these senders goes straight to Spam, where you can recover it until retention deletes it.",
+		count: "{{used}} of {{limit}}",
+		full: "You reached your plan's limit: delete a rule to add another one.",
+		loading: "Loading senders…",
+		empty: "You haven't blocked anyone yet.",
+		type: {
+			address: "Address",
+			domain: "Domain",
+		},
+		kindAllow: "Allowed",
+		value: "Address or domain to block",
+		addressPlaceholder: "someone@example.com",
+		domainPlaceholder: "example.com",
+		reason: "Reason (optional)",
+		reasonPlaceholder: "Why you are blocking it",
+		add: "Block",
+		added: "Sender blocked.",
+		addError: "The sender could not be blocked.",
+		remove: "Unblock",
+		removed: "Sender unblocked.",
+		addedAt: "Added on {{date}}",
+		expiresAt: "expires on {{date}}",
 	},
 	compose: {
 		button: "Compose",
@@ -81,5 +119,8 @@ export default {
 		TOO_MANY_SCHEDULED: "Too many scheduled messages.",
 		TRANSPORT_UNAVAILABLE: "The mail service is currently unavailable.",
 		ATTACHMENTS_UNAVAILABLE: "Attachments are currently unavailable.",
+		SPAM_RULE_EXISTS: "That sender is already on your list.",
+		SPAM_RULE_NOT_FOUND: "That rule is no longer on your list.",
+		TOO_MANY_SENDER_RULES: "You reached your plan's sender limit.",
 	},
 };

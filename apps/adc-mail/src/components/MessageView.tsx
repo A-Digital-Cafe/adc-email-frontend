@@ -9,16 +9,24 @@ interface Props {
 	folder: EmailFolder;
 	onDelete: (message: EmailMessage) => void;
 	onStar: (message: EmailMessage) => void;
+	onSpam: (message: EmailMessage, spam: boolean) => void;
 	/** Sólo en layout compacto: vuelve a la lista (la vista ocupa toda la pantalla). */
 	onBack?: () => void;
 	t: TFn;
 }
 
+/** `spamReason` del backend → clave con la explicación para el usuario. */
+const SPAM_REASON_KEYS: Record<string, string> = {
+	"blocked:user": "blockedByYou",
+	"blocked:global": "blockedByPlatform",
+	score: "detected",
+};
+
 function addressLine(list: EmailAddress[]): string {
 	return list.map((a) => (a.name ? `${a.name} <${a.address}>` : a.address)).join(", ");
 }
 
-export function MessageView({ message, onDelete, onStar, onBack, t }: Readonly<Props>) {
+export function MessageView({ message, folder, onDelete, onStar, onSpam, onBack, t }: Readonly<Props>) {
 	const [attachments, setAttachments] = useState<MailAttachment[]>([]);
 	const [preview, setPreview] = useState<MailAttachment | null>(null);
 
@@ -41,6 +49,11 @@ export function MessageView({ message, onDelete, onStar, onBack, t }: Readonly<P
 		if (res.success && res.data?.url) globalThis.open(resolveDownloadUrl(res.data.url), "_blank", "noopener");
 	};
 
+	// En `inbox` el botón manda a spam; en `spam` hace lo contrario. En el resto no aplica.
+	const showSpamAction = folder === "inbox" || folder === "spam";
+	const markingSpam = folder === "inbox";
+	const spamLabel = t(markingSpam ? "actions.markSpam" : "actions.notSpam");
+
 	const actions = (
 		<div className="flex shrink-0 items-center gap-1">
 			<button
@@ -52,6 +65,17 @@ export function MessageView({ message, onDelete, onStar, onBack, t }: Readonly<P
 			>
 				{message.starred ? "★" : "☆"}
 			</button>
+			{showSpamAction && (
+				<button
+					type="button"
+					aria-label={spamLabel}
+					title={spamLabel}
+					onClick={() => onSpam(message, markingSpam)}
+					className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-full hover:bg-text/10"
+				>
+					{markingSpam ? "🚫" : "✅"}
+				</button>
+			)}
 			<button
 				type="button"
 				aria-label={t("actions.delete")}
@@ -105,6 +129,22 @@ export function MessageView({ message, onDelete, onStar, onBack, t }: Readonly<P
 					{meta}
 					{actions}
 				</header>
+			)}
+
+			{folder === "spam" && (
+				<adc-callout tone="warning" role="note">
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<span className="min-w-0">
+							{t(`spam.reason.${SPAM_REASON_KEYS[message.spamReason ?? ""] ?? "unknown"}`)} {t("spam.recover")}
+						</span>
+						<adc-button
+							variant="accent-outlined"
+							size="small"
+							label={t("actions.notSpam")}
+							onClick={() => onSpam(message, false)}
+						/>
+					</div>
+				</adc-callout>
 			)}
 
 			<adc-mail-viewer html={message.bodyHtml || ""} />

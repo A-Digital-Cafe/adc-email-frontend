@@ -11,8 +11,21 @@ import { MessageView } from "./components/MessageView.tsx";
 import { ComposeModal } from "./components/ComposeModal.tsx";
 import { QuotaBanner } from "./components/QuotaBanner.tsx";
 import LandingView from "./pages/LandingView.tsx";
+import BlocklistView from "./pages/BlocklistView.tsx";
 
 const FOLDERS: EmailFolder[] = ["inbox", "sent", "drafts", "spam", "trash"];
+
+/**
+ * Acción del ítem de ajustes del sidebar. Va aparte de `FOLDERS` porque el click no abre una
+ * carpeta: castear el `action` a `EmailFolder` haría pedir `/folders/blocklist/messages`.
+ */
+const BLOCKLIST_ACTION = "blocklist";
+
+const BLOCKLIST_ICON = `<svg class="w-6 h-6 mx-auto block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>`;
+
+function isFolder(action: string): action is EmailFolder {
+	return (FOLDERS as string[]).includes(action);
+}
 
 const FOLDER_ICONS: Record<EmailFolder, string> = {
 	inbox: `<svg class="w-6 h-6 mx-auto block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z"/></svg>`,
@@ -28,6 +41,8 @@ export default function App() {
 	const [unauthorized, setUnauthorized] = useState(false);
 	const [account, setAccount] = useState<AccountInfo | null>(null);
 	const [folder, setFolder] = useState<EmailFolder>("inbox");
+	// Qué ocupa el panel principal: una carpeta (lista + lectura) o los ajustes de remitentes.
+	const [view, setView] = useState<"folder" | typeof BLOCKLIST_ACTION>("folder");
 	const [messages, setMessages] = useState<EmailMessage[]>([]);
 	const [counts, setCounts] = useState<Record<string, number>>({});
 	const [selected, setSelected] = useState<EmailMessage | null>(null);
@@ -36,7 +51,7 @@ export default function App() {
 	const [listLoading, setListLoading] = useState(false);
 	const [sidebarExpanded, setSidebarExpanded] = useState(false);
 	const sidebarRef = useRef<HTMLElement>(null);
-	const buttonRef = useRef<HTMLElement>(null);
+	const layoutRef = useRef<HTMLElement>(null);
 	// Por debajo de `lg` no hay espacio para lista + lectura en paralelo: la lista
 	// ocupa el ancho completo y el mensaje se abre en un modal a pantalla completa.
 	const compact = useIsCompact();
@@ -83,30 +98,38 @@ export default function App() {
 
 	const handleSidebarItemClick = useCallback(
 		(e: Event) => {
-			const action = (e as CustomEvent).detail?.action as EmailFolder | undefined;
+			const action = (e as CustomEvent).detail?.action as string | undefined;
 			if (!action) return;
+			setSidebarExpanded(false);
+			if (action === BLOCKLIST_ACTION) {
+				setView(BLOCKLIST_ACTION);
+				setSelected(null);
+				return;
+			}
+			if (!isFolder(action)) return;
+			setView("folder");
 			setFolder(action);
 			loadFolder(action);
-			setSidebarExpanded(false);
 		},
 		[loadFolder]
 	);
 
-	const handleExpandToggle = useCallback((e: Event) => {
+	const handleMobileMenuToggle = useCallback((e: Event) => {
 		setSidebarExpanded(!!(e as CustomEvent).detail);
 	}, []);
 
 	useEffect(() => {
 		if (!ready || loading || unauthorized) return;
 		const sidebar = sidebarRef.current;
-		const button = buttonRef.current;
+		// El evento del botón del header burbujea hasta `adc-layout`.
+		const layout = layoutRef.current;
 		sidebar?.addEventListener("adcSidebarItemClick", handleSidebarItemClick);
-		button?.addEventListener("adcExpandToggle", handleExpandToggle);
+		layout?.addEventListener("adcMobileMenuToggle", handleMobileMenuToggle);
 		return () => {
 			sidebar?.removeEventListener("adcSidebarItemClick", handleSidebarItemClick);
-			button?.removeEventListener("adcExpandToggle", handleExpandToggle);
+			layout?.removeEventListener("adcMobileMenuToggle", handleMobileMenuToggle);
 		};
-	}, [ready, loading, unauthorized, handleSidebarItemClick, handleExpandToggle]);
+	}, [ready, loading, unauthorized, handleSidebarItemClick, handleMobileMenuToggle]);
 
 	// El aside de `adc-sidebar` es `w-max`: su ancho depende del rótulo más largo
 	// (y del idioma), así que un offset fijo en rem lo tapa o deja un hueco. Se
@@ -164,6 +187,18 @@ export default function App() {
 		[selected, loadCounts]
 	);
 
+	// El mensaje cambia de carpeta, así que sale de la lista actual sea cual sea el sentido.
+	const handleSpam = useCallback(
+		async (message: EmailMessage, spam: boolean) => {
+			const res = await mailApi.reportSpam(message.id, spam);
+			if (!res.success) return;
+			setMessages((prev) => prev.filter((m) => m.id !== message.id));
+			if (selected?.id === message.id) setSelected(null);
+			loadCounts();
+		},
+		[selected, loadCounts]
+	);
+
 	const handleStar = useCallback(async (message: EmailMessage) => {
 		const next = !message.starred;
 		await mailApi.setStarred(message.id, next);
@@ -211,17 +246,29 @@ export default function App() {
 		);
 	}
 
-	const folderItems = FOLDERS.map((f) => ({
-		label: t(`folders.${f}`),
-		iconSvg: FOLDER_ICONS[f],
-		action: f,
-		badge: counts[f] ? String(counts[f]) : undefined,
-	}));
+	// Los ítems de ajustes van detrás de las carpetas pero no son carpetas: sin esta separación
+	// `handleSidebarItemClick` los trataría como una más (ver BLOCKLIST_ACTION).
+	const sidebarItems = [
+		...FOLDERS.map((f) => ({
+			label: t(`folders.${f}`),
+			iconSvg: FOLDER_ICONS[f],
+			action: f as string,
+			badge: counts[f] ? String(counts[f]) : undefined,
+		})),
+		{ label: t("blocklist.navTitle"), iconSvg: BLOCKLIST_ICON, action: BLOCKLIST_ACTION },
+	];
 
 	return (
 		// `fullWidth`: sin él el contenedor de `adc-layout` es `xl:w-max` (se ajusta al
 		// contenido), así que una línea larga de un correo ensancha la página entera.
-		<adc-layout fullWidth>
+		// `mobile-menu`: en mobile el logo del header abre el drawer de carpetas.
+		<adc-layout
+			ref={layoutRef}
+			fullWidth
+			mobile-menu
+			mobile-menu-open={sidebarExpanded || undefined}
+			mobile-menu-label={t("nav.menu")}
+		>
 			<div className="flex bg-background">
 				{/* Backdrop del drawer: en mobile el sidebar se superpone al contenido. */}
 				{sidebarExpanded && (
@@ -233,18 +280,13 @@ export default function App() {
 					/>
 				)}
 
-				{/* Expand button */}
-				<div
-					className={`
-					fixed top-1/2 z-50 lg:hidden
-					-translate-y-1/2 transition-all duration-300
-					${sidebarExpanded ? "left-70" : "left-5"}
-				`}
+				<adc-sidebar
+					ref={sidebarRef}
+					items={sidebarItems}
+					collapsed={!sidebarExpanded}
+					activeItem={view === "folder" ? folder : BLOCKLIST_ACTION}
+					title={t("nav.title")}
 				>
-					<adc-button-expand ref={buttonRef} isExpanded={sidebarExpanded} />
-				</div>
-
-				<adc-sidebar ref={sidebarRef} items={folderItems} collapsed={!sidebarExpanded} activeItem={folder} title={t("nav.title")}>
 					<button
 						slot="actions"
 						type="button"
@@ -269,33 +311,45 @@ export default function App() {
 					    sólo aplica el padding base. */}
 					<div className="pl-4 lg:pl-70" style={!compact && sidebarOffset ? { paddingLeft: sidebarOffset } : undefined}>
 						{account && <QuotaBanner account={account} t={t} />}
-						<div className="flex min-h-0">
-							<div className="w-full min-w-0 overflow-y-auto lg:max-w-md lg:border-r lg:border-text/10">
-								<MessageList
-									messages={messages}
-									folder={folder}
-									loading={listLoading}
-									selectedId={selected?.id}
-									onOpen={handleOpenMessage}
-									onDelete={handleDelete}
-									onStar={handleStar}
-									t={t}
-								/>
-							</div>
-
-							{/* En compacto la lectura vive en el modal de abajo, no en un panel lateral.
-							    `min-w-0`: sin eso el flex item se ensancha hasta el contenido (un correo
-							    con líneas largas) y la página entera desborda en horizontal. */}
-							{!compact && (
-								<div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-									{selected ? (
-										<MessageView message={selected} folder={folder} onDelete={handleDelete} onStar={handleStar} t={t} />
-									) : (
-										<div className="flex h-full items-center justify-center opacity-50">{t("view.noSelection")}</div>
-									)}
+						{view === BLOCKLIST_ACTION ? (
+							<BlocklistView t={t} />
+						) : (
+							<div className="flex min-h-0">
+								<div className="w-full min-w-0 overflow-y-auto lg:max-w-md lg:border-r lg:border-text/10">
+									<MessageList
+										messages={messages}
+										folder={folder}
+										loading={listLoading}
+										selectedId={selected?.id}
+										onOpen={handleOpenMessage}
+										onDelete={handleDelete}
+										onStar={handleStar}
+										onSpam={handleSpam}
+										t={t}
+									/>
 								</div>
-							)}
-						</div>
+
+								{/* En compacto la lectura vive en el modal de abajo, no en un panel lateral.
+								    `min-w-0`: sin eso el flex item se ensancha hasta el contenido (un correo
+								    con líneas largas) y la página entera desborda en horizontal. */}
+								{!compact && (
+									<div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+										{selected ? (
+											<MessageView
+												message={selected}
+												folder={folder}
+												onDelete={handleDelete}
+												onStar={handleStar}
+												onSpam={handleSpam}
+												t={t}
+											/>
+										) : (
+											<div className="flex h-full items-center justify-center opacity-50">{t("view.noSelection")}</div>
+										)}
+									</div>
+								)}
+							</div>
+						)}
 					</div>
 				</main>
 				{compact && selected && (
@@ -311,6 +365,7 @@ export default function App() {
 							folder={folder}
 							onDelete={handleDelete}
 							onStar={handleStar}
+							onSpam={handleSpam}
 							onBack={handleCloseSelected}
 							t={t}
 						/>

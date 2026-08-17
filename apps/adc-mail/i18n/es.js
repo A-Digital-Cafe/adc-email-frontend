@@ -1,6 +1,7 @@
 export default {
 	nav: {
 		title: "Correo",
+		menu: "Menú de Correo",
 	},
 	landing: {
 		title: "Correo",
@@ -45,6 +46,43 @@ export default {
 		delete: "Eliminar",
 		close: "Cerrar",
 		back: "Volver a la lista",
+		markSpam: "Marcar como spam",
+		notSpam: "No es spam",
+	},
+	spam: {
+		reason: {
+			blockedByYou: "Está en Spam porque bloqueaste a este remitente.",
+			blockedByPlatform: "Está en Spam porque la plataforma bloqueó a este remitente.",
+			detected: "Lo detectamos como spam por su remitente y su autenticación.",
+			unknown: "Está en Spam.",
+		},
+		recover: "Si te parece legítimo, devolvelo a la bandeja de entrada.",
+	},
+	blocklist: {
+		navTitle: "Remitentes bloqueados",
+		title: "Remitentes bloqueados",
+		description: "Lo que llegue de estos remitentes va directo a Spam, donde podés recuperarlo hasta que lo borre la retención.",
+		count: "{{used}} de {{limit}}",
+		full: "Llegaste al tope de tu plan: borrá alguna regla para agregar otra.",
+		loading: "Cargando remitentes…",
+		empty: "Todavía no bloqueaste a nadie.",
+		type: {
+			address: "Dirección",
+			domain: "Dominio",
+		},
+		kindAllow: "Permitido",
+		value: "Dirección o dominio a bloquear",
+		addressPlaceholder: "alguien@ejemplo.com",
+		domainPlaceholder: "ejemplo.com",
+		reason: "Motivo (opcional)",
+		reasonPlaceholder: "Por qué lo bloqueás",
+		add: "Bloquear",
+		added: "Remitente bloqueado.",
+		addError: "No se pudo bloquear al remitente.",
+		remove: "Desbloquear",
+		removed: "Remitente desbloqueado.",
+		addedAt: "Agregado el {{date}}",
+		expiresAt: "vence el {{date}}",
 	},
 	compose: {
 		button: "Redactar",
@@ -81,5 +119,8 @@ export default {
 		TOO_MANY_SCHEDULED: "Demasiados envíos programados.",
 		TRANSPORT_UNAVAILABLE: "El servicio de correo no está disponible en este momento.",
 		ATTACHMENTS_UNAVAILABLE: "Los adjuntos no están disponibles en este momento.",
+		SPAM_RULE_EXISTS: "Ese remitente ya está en tu lista.",
+		SPAM_RULE_NOT_FOUND: "Esa regla ya no existe en tu lista.",
+		TOO_MANY_SENDER_RULES: "Llegaste al tope de remitentes de tu plan.",
 	},
 };

@@ -1,6 +1,6 @@
 import { createAdcApi } from "@ui-library/utils/adc-fetch";
 import { IS_DEV, getDevUrl } from "@common/utils/url-utils.js";
-import type { EmailMessage, MailAccount, EmailFolder } from "@common/types/email/Email.ts";
+import type { EmailMessage, MailAccount, EmailFolder, SpamMatchType, SpamRuleKind, SpamRuleScope } from "@common/types/email/Email.ts";
 import type { EmailUserTierLimits, EmailOrgTierLimits } from "@common/types/tiers/email.ts";
 
 const api = createAdcApi({
@@ -77,6 +77,29 @@ export interface MailAttachment {
 	status: string;
 }
 
+/** Regla de remitente tal como la devuelve la API: fechas en ISO y sin el dueño. */
+export interface SenderRule {
+	id: string;
+	scope: SpamRuleScope;
+	kind: SpamRuleKind;
+	matchType: SpamMatchType;
+	/** Ya normalizado por el servidor (minúsculas, sin subaddressing). */
+	value: string;
+	reason: string;
+	createdBy: string;
+	createdAt: string;
+	expiresAt: string | null;
+}
+
+/** Alta de regla. El servidor valida y normaliza `value`, así que acá va tal cual lo tipeado. */
+export interface AddRuleInput {
+	matchType: SpamMatchType;
+	value: string;
+	kind: SpamRuleKind;
+	reason?: string;
+	expiresAt?: string | null;
+}
+
 /** Convierte los destinatarios de string a `{ address }`, que es lo que valida la API. */
 function withAddresses(data: Partial<ComposePayload>): Record<string, unknown> {
 	const toObjects = (list?: string[]) => list?.map((address) => ({ address }));
@@ -107,6 +130,11 @@ export const mailApi = {
 	move: (id: string, folder: EmailFolder) => api.patch<EmailMessage>(`/messages/${id}/move`, { body: { folder } }),
 
 	remove: (id: string) => api.delete<{ ok: boolean; purged: boolean }>(`/messages/${id}`),
+
+	// Sin clave de idempotencia: fija un veredicto sobre un mensaje que ya existe, así que
+	// repetirlo es el mismo estado (el endpoint declara `skipIdempotency`).
+	reportSpam: (id: string, spam: boolean, block?: boolean) =>
+		api.post<EmailMessage>(`/messages/${id}/spam`, { body: { spam, ...(block === undefined ? {} : { block }) } }),
 
 	listDrafts: () => api.get<{ folder: EmailFolder; messages: EmailMessage[] }>("/drafts"),
 
@@ -144,4 +172,14 @@ export const mailApi = {
 	downloadUrl: (attachmentId: string) => api.get<{ url: string }>(`/attachments/${attachmentId}/download`),
 
 	deleteAttachment: (attachmentId: string) => api.delete<{ ok: boolean }>(`/attachments/${attachmentId}`),
+
+	// `limit` es el tope de reglas del plan, no la paginación.
+	listBlocklist: () => api.get<{ rules: SenderRule[]; limit: number }>("/blocklist"),
+
+	// `silent`: el 409 (ya está en la lista) y el 413 (tope del plan) son respuestas esperadas del
+	// formulario y se muestran junto al campo, no como toast global. Sin clave de idempotencia:
+	// el propio 409 ya evita el duplicado de un reintento.
+	addBlocklistRule: (input: AddRuleInput) => api.post<SenderRule>("/blocklist", { body: input, silent: true }),
+
+	removeBlocklistRule: (id: string) => api.delete<{ ok: boolean }>(`/blocklist/${id}`),
 };
