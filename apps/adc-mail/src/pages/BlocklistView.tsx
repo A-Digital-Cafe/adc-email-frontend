@@ -6,6 +6,8 @@ import type { TFn } from "../types.ts";
 
 interface Props {
 	t: TFn;
+	/** Dentro del modal de configuración: sin padding externo ni título (los pone el modal). */
+	embedded?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ function formatDate(value: string): string {
 }
 
 /** Gestión de la lista personal de remitentes: lo que se bloquea acá cae en `spam`, nunca se descarta. */
-export default function BlocklistView({ t }: Readonly<Props>) {
+export default function BlocklistView({ t, embedded = false }: Readonly<Props>) {
 	const [rules, setRules] = useState<SenderRule[]>([]);
 	const [limit, setLimit] = useState(0);
 	const [loading, setLoading] = useState(true);
@@ -128,9 +130,9 @@ export default function BlocklistView({ t }: Readonly<Props>) {
 	}
 
 	return (
-		<section className="flex flex-col gap-4 p-4 lg:p-6">
+		<section className={`flex flex-col gap-4 ${embedded ? "" : "p-4 lg:p-6"}`}>
 			<header className="flex flex-col gap-1">
-				<h2 className="text-lg font-semibold">{t("blocklist.title")}</h2>
+				{!embedded && <h2 className="text-lg font-semibold">{t("blocklist.title")}</h2>}
 				<p className="text-sm opacity-70">{t("blocklist.description")}</p>
 				{limit > 0 && <p className="text-xs opacity-60">{t("blocklist.count", { used: String(rules.length), limit: String(limit) })}</p>}
 			</header>

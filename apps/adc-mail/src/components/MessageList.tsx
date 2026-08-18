@@ -1,4 +1,4 @@
-import type { EmailMessage, EmailFolder, EmailAddress } from "@common/types/email/Email.ts";
+import type { EmailMessage, EmailFolder, EmailAddress, MailListDensity } from "@common/types/email/Email.ts";
 import type { TFn } from "../types.ts";
 
 interface Props {
@@ -9,7 +9,10 @@ interface Props {
 	onOpen: (message: EmailMessage) => void;
 	onDelete: (message: EmailMessage) => void;
 	onStar: (message: EmailMessage) => void;
-	onSpam: (message: EmailMessage, spam: boolean) => void;
+	/** Sólo en spam y papelera: vaciar la carpeta entera. Sin handler, la barra no se pinta. */
+	onEmptyFolder?: () => void;
+	/** Preferencia del titular: `compact` sacrifica aire para que entren más mensajes por pantalla. */
+	density?: MailListDensity;
 	t: TFn;
 }
 
@@ -29,11 +32,22 @@ function formatDate(value: string | Date | undefined): string {
 	return sameDay ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString();
 }
 
-export function MessageList({ messages, folder, loading, selectedId, onOpen, onDelete, onStar, onSpam, t }: Readonly<Props>) {
-	// En `inbox` el botón manda a spam; en `spam` hace lo contrario. En el resto no aplica.
-	const showSpamAction = folder === "inbox" || folder === "spam";
-	const markingSpam = folder === "inbox";
-	const spamLabel = t(markingSpam ? "actions.markSpam" : "actions.notSpam");
+// El atajo de "marcar como spam" NO va acá: en una fila de la lista, pegado a destacar y borrar,
+// se clickea sin querer y mover un correo a spam no es un error barato. Vive sólo en el mensaje
+// abierto (`MessageView`), donde ya se leyó de qué se trata.
+export function MessageList({
+	messages,
+	folder,
+	loading,
+	selectedId,
+	onOpen,
+	onDelete,
+	onStar,
+	onEmptyFolder,
+	density = "comfortable",
+	t,
+}: Readonly<Props>) {
+	const emptiable = folder === "spam" || folder === "trash";
 
 	if (loading) {
 		return (
@@ -53,108 +67,86 @@ export function MessageList({ messages, folder, loading, selectedId, onOpen, onD
 		);
 	}
 	return (
-		<ul className="divide-y divide-text/10">
-			{messages.map((message) => {
-				const active = message.id === selectedId;
-				const unread = !message.read && folder !== "drafts";
-				return (
-					<li key={message.id} className={`relative ${active ? "bg-alt" : "hover:bg-alt"}`}>
-						<button
-							type="button"
-							aria-label={t("list.open", { subject: message.subject || t("list.noSubject") })}
-							onClick={() => onOpen(message)}
-							className="absolute inset-0 h-full w-full cursor-pointer"
-						/>
-						<div className="pointer-events-none relative flex flex-col gap-1 px-4 py-3">
-							<div className="flex items-center justify-between gap-2">
-								<span className={`truncate ${unread ? "mail-unread" : ""}`}>{formatAddress(folder, message)}</span>
-								<span className="shrink-0 text-xs opacity-60">
-									{formatDate(message.sentAt || message.receivedAt || message.createdAt)}
-								</span>
-							</div>
-							<div className="flex items-center justify-between gap-2">
-								<span className={`truncate text-sm ${unread ? "mail-unread" : "opacity-80"}`}>
-									{message.subject || t("list.noSubject")}
-								</span>
-								<div className="pointer-events-auto relative flex shrink-0 items-center gap-1">
-									<button
-										type="button"
-										aria-label={t("actions.star")}
-										aria-pressed={message.starred ? "true" : "false"}
-										title={t("actions.star")}
-										className={`inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full hover:bg-text/10 lg:h-8 lg:w-8 ${
-											message.starred ? "text-warn" : "text-muted"
-										}`}
-										onClick={(e) => {
-											e.stopPropagation();
-											onStar(message);
-										}}
-									>
-										<svg
-											width="18"
-											height="18"
-											viewBox="0 0 24 24"
-											fill={message.starred ? "currentColor" : "none"}
-											stroke="currentColor"
-											strokeWidth="2"
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											aria-hidden="true"
-										>
-											<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-										</svg>
-									</button>
-									{showSpamAction && (
+		<>
+			{emptiable && onEmptyFolder && (
+				<div className="flex justify-end border-b border-text/10 px-4 py-2">
+					<button type="button" className="text-sm text-danger underline-offset-2 hover:underline" onClick={onEmptyFolder}>
+						{t(`list.empty${folder === "trash" ? "Trash" : "Spam"}Action`)}
+					</button>
+				</div>
+			)}
+			<ul className="divide-y divide-text/10">
+				{messages.map((message) => {
+					const active = message.id === selectedId;
+					const unread = !message.read && folder !== "drafts";
+					return (
+						<li key={message.id} className={`relative ${active ? "bg-alt" : "hover:bg-alt"}`}>
+							<button
+								type="button"
+								aria-label={t("list.open", { subject: message.subject || t("list.noSubject") })}
+								onClick={() => onOpen(message)}
+								className="absolute inset-0 h-full w-full cursor-pointer"
+							/>
+							<div
+								className={`pointer-events-none relative flex flex-col px-4 ${density === "compact" ? "gap-0 py-1.5" : "gap-1 py-3"}`}
+							>
+								<div className="flex items-center justify-between gap-2">
+									<span className={`truncate ${unread ? "mail-unread" : ""}`}>{formatAddress(folder, message)}</span>
+									<span className="shrink-0 text-xs opacity-60">
+										{formatDate(message.sentAt || message.receivedAt || message.createdAt)}
+									</span>
+								</div>
+								<div className="flex items-center justify-between gap-2">
+									<span className={`truncate text-sm ${unread ? "mail-unread" : "opacity-80"}`}>
+										{message.subject || t("list.noSubject")}
+									</span>
+									<div className="pointer-events-auto relative flex shrink-0 items-center gap-1">
 										<button
 											type="button"
-											aria-label={spamLabel}
-											title={spamLabel}
-											className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 lg:h-8 lg:w-8"
+											aria-label={t("actions.star")}
+											aria-pressed={message.starred ? "true" : "false"}
+											title={t("actions.star")}
+											className={`inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full hover:bg-text/10 lg:h-8 lg:w-8 ${
+												message.starred ? "text-warn" : "text-muted"
+											}`}
 											onClick={(e) => {
 												e.stopPropagation();
-												onSpam(message, markingSpam);
+												onStar(message);
 											}}
 										>
 											<svg
 												width="18"
 												height="18"
 												viewBox="0 0 24 24"
-												fill="none"
+												fill={message.starred ? "currentColor" : "none"}
 												stroke="currentColor"
 												strokeWidth="2"
 												strokeLinecap="round"
 												strokeLinejoin="round"
 												aria-hidden="true"
 											>
-												{markingSpam ? (
-													<>
-														<circle cx="12" cy="12" r="9" />
-														<line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
-													</>
-												) : (
-													<polyline points="20 6 9 17 4 12" />
-												)}
+												<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
 											</svg>
 										</button>
-									)}
-									<button
-										type="button"
-										aria-label={t("actions.delete")}
-										title={t("actions.delete")}
-										className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-danger lg:h-8 lg:w-8"
-										onClick={(e) => {
-											e.stopPropagation();
-											onDelete(message);
-										}}
-									>
-										<adc-icon-trash size="1rem" />
-									</button>
+										<button
+											type="button"
+											aria-label={t("actions.delete")}
+											title={t("actions.delete")}
+											className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-danger lg:h-8 lg:w-8"
+											onClick={(e) => {
+												e.stopPropagation();
+												onDelete(message);
+											}}
+										>
+											<adc-icon-trash size="1rem" />
+										</button>
+									</div>
 								</div>
 							</div>
-						</div>
-					</li>
-				);
-			})}
-		</ul>
+						</li>
+					);
+				})}
+			</ul>
+		</>
 	);
 }

@@ -5,23 +5,15 @@ import { getSession } from "@ui-library/utils/session";
 import { clearErrors } from "@ui-library/utils/adc-fetch";
 import { useIsCompact } from "@ui-library/utils/use-media-query";
 import type { EmailMessage, EmailFolder } from "@common/types/email/Email.ts";
-import { mailApi, type AccountInfo } from "./utils/mail-api.ts";
+import { mailApi, type AccountInfo, type MailSettings } from "./utils/mail-api.ts";
 import { MessageList } from "./components/MessageList.tsx";
 import { MessageView } from "./components/MessageView.tsx";
 import { ComposeModal } from "./components/ComposeModal.tsx";
 import { QuotaBanner } from "./components/QuotaBanner.tsx";
 import LandingView from "./pages/LandingView.tsx";
-import BlocklistView from "./pages/BlocklistView.tsx";
+import { SettingsMenu } from "./components/SettingsMenu.tsx";
 
 const FOLDERS: EmailFolder[] = ["inbox", "sent", "drafts", "spam", "trash"];
-
-/**
- * Acción del ítem de ajustes del sidebar. Va aparte de `FOLDERS` porque el click no abre una
- * carpeta: castear el `action` a `EmailFolder` haría pedir `/folders/blocklist/messages`.
- */
-const BLOCKLIST_ACTION = "blocklist";
-
-const BLOCKLIST_ICON = `<svg class="w-6 h-6 mx-auto block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>`;
 
 function isFolder(action: string): action is EmailFolder {
 	return (FOLDERS as string[]).includes(action);
@@ -35,14 +27,16 @@ const FOLDER_ICONS: Record<EmailFolder, string> = {
 	trash: `<svg class="w-6 h-6 mx-auto block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.02-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>`,
 };
 
+/** Mientras no responda `/settings` (backend viejo, o cuenta nueva) vale lo mismo que el default del servidor. */
+const SETTINGS_FALLBACK: MailSettings = { attachmentOverflow: "drive-link", autoMarkRead: true, listDensity: "comfortable" };
+
 export default function App() {
 	const { t, ready } = useTranslation({ namespace: "adc-mail", autoLoad: true });
 	const [loading, setLoading] = useState(true);
 	const [unauthorized, setUnauthorized] = useState(false);
 	const [account, setAccount] = useState<AccountInfo | null>(null);
 	const [folder, setFolder] = useState<EmailFolder>("inbox");
-	// Qué ocupa el panel principal: una carpeta (lista + lectura) o los ajustes de remitentes.
-	const [view, setView] = useState<"folder" | typeof BLOCKLIST_ACTION>("folder");
+	const [settings, setSettings] = useState<MailSettings>(SETTINGS_FALLBACK);
 	const [messages, setMessages] = useState<EmailMessage[]>([]);
 	const [counts, setCounts] = useState<Record<string, number>>({});
 	const [selected, setSelected] = useState<EmailMessage | null>(null);
@@ -85,8 +79,9 @@ export default function App() {
 			setLoading(false);
 			return;
 		}
-		const acc = await mailApi.getAccount();
+		const [acc, prefs] = await Promise.all([mailApi.getAccount(), mailApi.getSettings()]);
 		if (acc.success && acc.data) setAccount(acc.data);
+		if (prefs.success && prefs.data) setSettings(prefs.data);
 		await loadFolder("inbox");
 		await loadCounts();
 		setLoading(false);
@@ -101,13 +96,7 @@ export default function App() {
 			const action = (e as CustomEvent).detail?.action as string | undefined;
 			if (!action) return;
 			setSidebarExpanded(false);
-			if (action === BLOCKLIST_ACTION) {
-				setView(BLOCKLIST_ACTION);
-				setSelected(null);
-				return;
-			}
 			if (!isFolder(action)) return;
-			setView("folder");
 			setFolder(action);
 			loadFolder(action);
 		},
@@ -166,16 +155,38 @@ export default function App() {
 				return;
 			}
 			setSelected(full);
-			if (!full.read) {
+			if (!full.read && settings.autoMarkRead) {
 				await mailApi.setRead(full.id, true);
 				setMessages((prev) => prev.map((m) => (m.id === full.id ? { ...m, read: true } : m)));
 				loadCounts();
 			}
 		},
-		[loadCounts]
+		[loadCounts, settings.autoMarkRead]
 	);
 
 	const handleCloseSelected = useCallback(() => setSelected(null), []);
+
+	// Confirmación de vaciado: sólo la carpeta pedida, para que cerrar el modal no deje un "sí"
+	// colgado apuntando a otra carpeta si el usuario cambió de carpeta mientras decidía.
+	const [emptying, setEmptying] = useState<"spam" | "trash" | null>(null);
+	const [emptyBusy, setEmptyBusy] = useState(false);
+
+	const confirmEmptyFolder = useCallback(async () => {
+		const target = emptying;
+		if (!target || emptyBusy) return;
+		setEmptyBusy(true);
+		// El backend vacía de a lotes y avisa cuánto quedó: se repite hasta terminar en vez de
+		// pedirle una sola request enorme que bloquee el worker.
+		for (;;) {
+			const res = await mailApi.emptyFolder(target);
+			if (!res.success || !res.data || res.data.remaining === 0) break;
+		}
+		setEmptyBusy(false);
+		setEmptying(null);
+		setSelected(null);
+		await loadFolder(target);
+		await loadCounts();
+	}, [emptying, emptyBusy, loadFolder, loadCounts]);
 
 	const handleDelete = useCallback(
 		async (message: EmailMessage) => {
@@ -203,7 +214,7 @@ export default function App() {
 		const next = !message.starred;
 		await mailApi.setStarred(message.id, next);
 		setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, starred: next } : m)));
-		setSelected((prev) => (prev && prev.id === message.id ? { ...prev, starred: next } : prev));
+		setSelected((prev) => (prev?.id === message.id ? { ...prev, starred: next } : prev));
 	}, []);
 
 	const handleCompose = useCallback(() => {
@@ -246,30 +257,24 @@ export default function App() {
 		);
 	}
 
-	// Los ítems de ajustes van detrás de las carpetas pero no son carpetas: sin esta separación
-	// `handleSidebarItemClick` los trataría como una más (ver BLOCKLIST_ACTION).
-	const sidebarItems = [
-		...FOLDERS.map((f) => ({
-			label: t(`folders.${f}`),
-			iconSvg: FOLDER_ICONS[f],
-			action: f as string,
-			badge: counts[f] ? String(counts[f]) : undefined,
-		})),
-		{ label: t("blocklist.navTitle"), iconSvg: BLOCKLIST_ICON, action: BLOCKLIST_ACTION },
-	];
+	const sidebarItems = FOLDERS.map((f) => ({
+		label: t(`folders.${f}`),
+		iconSvg: FOLDER_ICONS[f],
+		action: f as string,
+		badge: counts[f] ? String(counts[f]) : undefined,
+	}));
 
 	return (
 		// `fullWidth`: sin él el contenedor de `adc-layout` es `xl:w-max` (se ajusta al
 		// contenido), así que una línea larga de un correo ensancha la página entera.
 		// `mobile-menu`: en mobile el logo del header abre el drawer de carpetas.
-		<adc-layout
-			ref={layoutRef}
-			fullWidth
-			mobile-menu
-			mobile-menu-open={sidebarExpanded || undefined}
-			mobile-menu-label={t("nav.menu")}
-		>
+		<adc-layout ref={layoutRef} fullWidth mobile-menu mobile-menu-open={sidebarExpanded || undefined} mobile-menu-label={t("nav.menu")}>
 			<div className="flex bg-background">
+				{/* Dentro del wrapper y no como hermano de `adc-layout`: reubica sus slotted children y
+				    con más de uno React pierde la referencia del hermano (`insertBefore`). El modal es
+				    fijo, así que colgar de acá no cambia dónde se ve. */}
+				<SettingsMenu t={t} settings={settings} onChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))} />
+
 				{/* Backdrop del drawer: en mobile el sidebar se superpone al contenido. */}
 				{sidebarExpanded && (
 					<button
@@ -280,13 +285,7 @@ export default function App() {
 					/>
 				)}
 
-				<adc-sidebar
-					ref={sidebarRef}
-					items={sidebarItems}
-					collapsed={!sidebarExpanded}
-					activeItem={view === "folder" ? folder : BLOCKLIST_ACTION}
-					title={t("nav.title")}
-				>
+				<adc-sidebar ref={sidebarRef} items={sidebarItems} collapsed={!sidebarExpanded} activeItem={folder} title={t("nav.title")}>
 					<button
 						slot="actions"
 						type="button"
@@ -311,55 +310,46 @@ export default function App() {
 					    sólo aplica el padding base. */}
 					<div className="pl-4 lg:pl-70" style={!compact && sidebarOffset ? { paddingLeft: sidebarOffset } : undefined}>
 						{account && <QuotaBanner account={account} t={t} />}
-						{view === BLOCKLIST_ACTION ? (
-							<BlocklistView t={t} />
-						) : (
-							<div className="flex min-h-0">
-								<div className="w-full min-w-0 overflow-y-auto lg:max-w-md lg:border-r lg:border-text/10">
-									<MessageList
-										messages={messages}
-										folder={folder}
-										loading={listLoading}
-										selectedId={selected?.id}
-										onOpen={handleOpenMessage}
-										onDelete={handleDelete}
-										onStar={handleStar}
-										onSpam={handleSpam}
-										t={t}
-									/>
-								</div>
+						<div className="flex min-h-0">
+							<div className="w-full min-w-0 overflow-y-auto lg:max-w-md lg:border-r lg:border-text/10">
+								<MessageList
+									messages={messages}
+									folder={folder}
+									loading={listLoading}
+									selectedId={selected?.id}
+									onOpen={handleOpenMessage}
+									onDelete={handleDelete}
+									onStar={handleStar}
+									onEmptyFolder={folder === "spam" || folder === "trash" ? () => setEmptying(folder) : undefined}
+									density={settings.listDensity}
+									t={t}
+								/>
+							</div>
 
-								{/* En compacto la lectura vive en el modal de abajo, no en un panel lateral.
+							{/* En compacto la lectura vive en el modal de abajo, no en un panel lateral.
 								    `min-w-0`: sin eso el flex item se ensancha hasta el contenido (un correo
 								    con líneas largas) y la página entera desborda en horizontal. */}
-								{!compact && (
-									<div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-										{selected ? (
-											<MessageView
-												message={selected}
-												folder={folder}
-												onDelete={handleDelete}
-												onStar={handleStar}
-												onSpam={handleSpam}
-												t={t}
-											/>
-										) : (
-											<div className="flex h-full items-center justify-center opacity-50">{t("view.noSelection")}</div>
-										)}
-									</div>
-								)}
-							</div>
-						)}
+							{!compact && (
+								<div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+									{selected ? (
+										<MessageView
+											message={selected}
+											folder={folder}
+											onDelete={handleDelete}
+											onStar={handleStar}
+											onSpam={handleSpam}
+											t={t}
+										/>
+									) : (
+										<div className="flex h-full items-center justify-center opacity-50">{t("view.noSelection")}</div>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
 				</main>
 				{compact && selected && (
-					<adc-modal
-						open
-						size="full"
-						hideChrome
-						modalTitle={selected.subject || t("list.noSubject")}
-						onadcClose={handleCloseSelected}
-					>
+					<adc-modal open size="full" hideChrome modalTitle={selected.subject || t("list.noSubject")} onadcClose={handleCloseSelected}>
 						<MessageView
 							message={selected}
 							folder={folder}
@@ -372,6 +362,31 @@ export default function App() {
 					</adc-modal>
 				)}
 				{composeOpen && <ComposeModal draft={composeDraft} policy={account?.policy ?? null} onClose={handleComposeClose} t={t} />}
+
+				<adc-modal
+					open={!!emptying}
+					size="sm"
+					modalTitle={t(emptying === "trash" ? "list.emptyTrashAction" : "list.emptySpamAction")}
+					onadcClose={() => !emptyBusy && setEmptying(null)}
+				>
+					<p className="text-sm">{t(emptying === "trash" ? "list.emptyTrashConfirm" : "list.emptySpamConfirm")}</p>
+					<div slot="footer" className="flex gap-2">
+						<adc-button
+							variant="accent-outlined"
+							size="small"
+							label={t("actions.cancel")}
+							disabled={emptyBusy}
+							onClick={() => setEmptying(null)}
+						/>
+						<adc-button
+							variant="danger"
+							size="small"
+							label={t("actions.confirmEmpty")}
+							loading={emptyBusy}
+							onClick={confirmEmptyFolder}
+						/>
+					</div>
+				</adc-modal>
 			</div>
 		</adc-layout>
 	);

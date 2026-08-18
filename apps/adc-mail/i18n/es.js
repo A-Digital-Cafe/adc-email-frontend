@@ -27,6 +27,10 @@ export default {
 		trash: "Papelera",
 	},
 	list: {
+		emptySpamAction: "Vaciar spam",
+		emptyTrashAction: "Vaciar papelera",
+		emptySpamConfirm: "Todo lo que hay en Spam pasa a la papelera, donde podés recuperarlo hasta que lo borre la retención.",
+		emptyTrashConfirm: "Se borran definitivamente todos los mensajes de la papelera, con sus adjuntos. Esto no se puede deshacer.",
 		loading: "Cargando mensajes…",
 		empty: "No hay mensajes",
 		noSubject: "(sin asunto)",
@@ -48,6 +52,8 @@ export default {
 		back: "Volver a la lista",
 		markSpam: "Marcar como spam",
 		notSpam: "No es spam",
+		cancel: "Cancelar",
+		confirmEmpty: "Sí, vaciar",
 	},
 	spam: {
 		reason: {
@@ -122,5 +128,34 @@ export default {
 		SPAM_RULE_EXISTS: "Ese remitente ya está en tu lista.",
 		SPAM_RULE_NOT_FOUND: "Esa regla ya no existe en tu lista.",
 		TOO_MANY_SENDER_RULES: "Llegaste al tope de remitentes de tu plan.",
+	},
+	settings: {
+		title: "Configuración",
+		saveError: "No se pudo guardar la preferencia.",
+		tabs: {
+			senders: "Remitentes",
+			attachments: "Adjuntos",
+			reading: "Lectura",
+		},
+		attachments: {
+			description: "Qué hacer cuando llega un adjunto y no entra en tu cuota de correo.",
+			overflowTitle: "Si el adjunto no entra",
+			overflow: {
+				driveLink: "Guardarlo en mi Drive",
+				reject: "Rechazar el correo",
+			},
+			overflowHint: {
+				"drive-link": "El correo llega igual y el archivo va a la carpeta email-attachments de tu Drive, donde ocupa esa cuota.",
+				reject: "El correo se rechaza y el remitente recibe el aviso de que no se pudo entregar.",
+			},
+		},
+		reading: {
+			autoMarkRead: "Marcar como leído al abrir",
+			autoMarkReadHint: "Apagado, el mensaje sigue sin leer hasta que lo marques a mano.",
+			density: "Densidad de la lista",
+			densityHint: "Compacta entra más correo por pantalla; cómoda se lee mejor.",
+			densityComfortable: "Cómoda",
+			densityCompact: "Compacta",
+		},
 	},
 };

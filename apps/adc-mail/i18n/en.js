@@ -27,6 +27,10 @@ export default {
 		trash: "Trash",
 	},
 	list: {
+		emptySpamAction: "Empty spam",
+		emptyTrashAction: "Empty trash",
+		emptySpamConfirm: "Everything in Spam moves to the trash, where you can recover it until retention deletes it.",
+		emptyTrashConfirm: "Every message in the trash is permanently deleted, along with its attachments. This cannot be undone.",
 		loading: "Loading messages…",
 		empty: "No messages",
 		noSubject: "(no subject)",
@@ -48,6 +52,8 @@ export default {
 		back: "Back to list",
 		markSpam: "Mark as spam",
 		notSpam: "Not spam",
+		cancel: "Cancel",
+		confirmEmpty: "Yes, empty it",
 	},
 	spam: {
 		reason: {
@@ -122,5 +128,34 @@ export default {
 		SPAM_RULE_EXISTS: "That sender is already on your list.",
 		SPAM_RULE_NOT_FOUND: "That rule is no longer on your list.",
 		TOO_MANY_SENDER_RULES: "You reached your plan's sender limit.",
+	},
+	settings: {
+		title: "Settings",
+		saveError: "The preference could not be saved.",
+		tabs: {
+			senders: "Senders",
+			attachments: "Attachments",
+			reading: "Reading",
+		},
+		attachments: {
+			description: "What to do when an attachment arrives and does not fit your mail quota.",
+			overflowTitle: "If the attachment does not fit",
+			overflow: {
+				driveLink: "Save it to my Drive",
+				reject: "Reject the message",
+			},
+			overflowHint: {
+				"drive-link": "The message still arrives and the file goes to the email-attachments folder in your Drive, against that quota.",
+				reject: "The message is rejected and the sender is told it could not be delivered.",
+			},
+		},
+		reading: {
+			autoMarkRead: "Mark as read when opened",
+			autoMarkReadHint: "When off, the message stays unread until you mark it yourself.",
+			density: "List density",
+			densityHint: "Compact fits more mail on screen; comfortable is easier to read.",
+			densityComfortable: "Comfortable",
+			densityCompact: "Compact",
+		},
 	},
 };

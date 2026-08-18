@@ -33,7 +33,7 @@ export function MessageView({ message, folder, onDelete, onStar, onSpam, onBack,
 	useEffect(() => {
 		let active = true;
 		if (message.attachmentIds?.length) {
-			mailApi.listDraftAttachments(message.id).then((res) => {
+			mailApi.listAttachments(message.id).then((res) => {
 				if (active && res.success && res.data) setAttachments(res.data);
 			});
 		} else {

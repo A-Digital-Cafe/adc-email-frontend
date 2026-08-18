@@ -48,7 +48,7 @@ export function ComposeModal({ draft, policy, onClose, t }: Readonly<Props>) {
 
 	useEffect(() => {
 		if (draft?.id && draft.attachmentIds?.length) {
-			mailApi.listDraftAttachments(draft.id).then((res) => {
+			mailApi.listAttachments(draft.id).then((res) => {
 				if (res.success && res.data) setAttachments(res.data);
 			});
 		}

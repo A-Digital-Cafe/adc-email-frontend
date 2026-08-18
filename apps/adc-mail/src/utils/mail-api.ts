@@ -1,6 +1,15 @@
 import { createAdcApi } from "@ui-library/utils/adc-fetch";
 import { IS_DEV, getDevUrl } from "@common/utils/url-utils.js";
-import type { EmailMessage, MailAccount, EmailFolder, SpamMatchType, SpamRuleKind, SpamRuleScope } from "@common/types/email/Email.ts";
+import type {
+	EmailMessage,
+	MailAccount,
+	EmailFolder,
+	SpamMatchType,
+	SpamRuleKind,
+	SpamRuleScope,
+	AttachmentOverflowPolicy,
+	MailListDensity,
+} from "@common/types/email/Email.ts";
 import type { EmailUserTierLimits, EmailOrgTierLimits } from "@common/types/tiers/email.ts";
 
 const api = createAdcApi({
@@ -100,6 +109,13 @@ export interface AddRuleInput {
 	expiresAt?: string | null;
 }
 
+/** Preferencias del buzón tal como las expone la API (sin `userId` ni marca de tiempo). */
+export interface MailSettings {
+	attachmentOverflow: AttachmentOverflowPolicy;
+	autoMarkRead: boolean;
+	listDensity: MailListDensity;
+}
+
 /** Convierte los destinatarios de string a `{ address }`, que es lo que valida la API. */
 function withAddresses(data: Partial<ComposePayload>): Record<string, unknown> {
 	const toObjects = (list?: string[]) => list?.map((address) => ({ address }));
@@ -122,6 +138,10 @@ export const mailApi = {
 	folderCount: (folder: EmailFolder) => api.get<FolderCount>(`/folders/${folder}/count`, { silent: true }),
 
 	getMessage: (id: string) => api.get<EmailMessage>(`/messages/${id}`),
+
+	// Trabaja de a lotes: `remaining > 0` significa que quedó carpeta por vaciar (ver el bucle en App).
+	emptyFolder: (folder: "spam" | "trash") =>
+		api.delete<{ folder: EmailFolder; deleted: number; remaining: number }>(`/folders/${folder}/messages`),
 
 	setRead: (id: string, read: boolean) => api.patch<EmailMessage>(`/messages/${id}/read`, { body: { read } }),
 
@@ -151,7 +171,8 @@ export const mailApi = {
 			idempotencyData: data,
 		}),
 
-	listDraftAttachments: (draftId: string) => api.get<MailAttachment[]>(`/drafts/${draftId}/attachments`),
+	// Sirve para un borrador y para un correo recibido: la lista sale del propio mensaje.
+	listAttachments: (messageId: string) => api.get<MailAttachment[]>(`/messages/${messageId}/attachments`),
 
 	// Cada presign registra un adjunto nuevo; subir dos veces el mismo archivo es
 	// legítimo, así que la clave se distingue por invocación.
@@ -182,4 +203,11 @@ export const mailApi = {
 	addBlocklistRule: (input: AddRuleInput) => api.post<SenderRule>("/blocklist", { body: input, silent: true }),
 
 	removeBlocklistRule: (id: string) => api.delete<{ ok: boolean }>(`/blocklist/${id}`),
+
+	// `silent`: la app arranca leyendo preferencias y un backend viejo (sin el endpoint) tiene que
+	// caer a los defaults sin gritarle al usuario.
+	getSettings: () => api.get<MailSettings>("/settings", { silent: true }),
+
+	// Sin clave de idempotencia: es un `$set` por usuario, reintentar deja el mismo estado.
+	updateSettings: (patch: Partial<MailSettings>) => api.patch<MailSettings>("/settings", { body: patch }),
 };
