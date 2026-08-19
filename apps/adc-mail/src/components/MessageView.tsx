@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { EmailMessage, EmailFolder, EmailAddress } from "@common/types/email/Email.ts";
 import { mailApi, resolveDownloadUrl, type MailAttachment } from "../utils/mail-api.ts";
 import { AttachmentPreviewModal, attachmentPreviewKind } from "./AttachmentPreviewModal.tsx";
@@ -24,6 +24,97 @@ const SPAM_REASON_KEYS: Record<string, string> = {
 
 function addressLine(list: EmailAddress[]): string {
 	return list.map((a) => (a.name ? `${a.name} <${a.address}>` : a.address)).join(", ");
+}
+
+function securityLabel(message: EmailMessage, t: TFn): string {
+	const tls = message.transportSecurity;
+	if (!tls) return message.authResults ? t("view.details.plain") : t("view.details.internal");
+	const detail = [tls.version, tls.cipher].filter(Boolean).join(" · ");
+	return detail ? t("view.details.encryptedWith", { detail }) : t("view.details.encrypted");
+}
+
+/** Filas del panel de detalles. Sin autenticación del MTA no hay nada que informar de SPF/DKIM. */
+function detailRows(message: EmailMessage, t: TFn): Array<[string, string]> {
+	const date = message.receivedAt ?? message.sentAt ?? message.createdAt;
+	const rows: Array<[string, string]> = [[t("view.details.date"), date ? new Date(date).toLocaleString() : "—"]];
+	if (message.direction !== "inbound") return rows;
+
+	const auth = message.authResults;
+	if (auth) {
+		rows.push([t("view.details.mailedBy"), auth.mailedBy || t(auth.spf === "fail" ? "view.details.spfFail" : "view.details.spfNone")], [t("view.details.signedBy"), auth.signedBy || t(auth.dkim === "fail" ? "view.details.dkimFail" : "view.details.dkimNone")]);
+	}
+	rows.push([t("view.details.security"), securityLabel(message, t)]);
+	return rows;
+}
+
+/**
+ * Cabecera "De / Para" que despliega los detalles técnicos del mensaje.
+ *
+ * Se abre por hover sólo con mouse (`pointerType`): en táctil el tap dispara además `pointerenter`,
+ * y con el hover activo el segundo tap no podría cerrar el panel. El panel crece en el flujo en vez
+ * de flotar porque el panel de lectura es `overflow-y-auto` y le recortaba las últimas filas.
+ */
+function AddressBlock({ message, t }: Readonly<{ message: EmailMessage; t: TFn }>) {
+	const [pinned, setPinned] = useState(false);
+	const [hovered, setHovered] = useState(false);
+	const wrapper = useRef<HTMLDivElement>(null);
+	const panelId = useId();
+	const open = pinned || hovered;
+
+	useEffect(() => {
+		if (!pinned) return;
+		const onPointerDown = (e: PointerEvent) => {
+			if (!wrapper.current?.contains(e.target as Node)) setPinned(false);
+		};
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setPinned(false);
+		};
+		document.addEventListener("pointerdown", onPointerDown);
+		document.addEventListener("keydown", onKeyDown);
+		return () => {
+			document.removeEventListener("pointerdown", onPointerDown);
+			document.removeEventListener("keydown", onKeyDown);
+		};
+	}, [pinned]);
+
+	return (
+		<div ref={wrapper} onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(true)} onPointerLeave={() => setHovered(false)}>
+			<button
+				type="button"
+				aria-expanded={open}
+				aria-controls={panelId}
+				title={t("view.details.toggle")}
+				onClick={() => setPinned((v) => !v)}
+				className="flex w-full touch-manipulation items-center gap-2 rounded-md py-1 text-left hover:bg-text/5"
+			>
+				<span className="min-w-0">
+					<span className="block text-sm opacity-70 wrap-break-word">
+						{t("view.from")}: {addressLine([message.from])}
+					</span>
+					<span className="block text-sm opacity-70 wrap-break-word">
+						{t("view.to")}: {addressLine(message.to)}
+					</span>
+				</span>
+				<adc-icon-line-arrow-right
+					style={{ transform: `rotate(${open ? 270 : 90}deg)`, transition: "transform 0.1s ease" }}
+					aria-hidden="true"
+				/>
+			</button>
+			{open && (
+				<dl
+					id={panelId}
+					className="mt-1 max-w-sm rounded-lg border border-text/15 bg-alt p-3 text-sm"
+				>
+					{detailRows(message, t).map(([label, value]) => (
+						<div key={label} className="flex gap-2 py-0.5">
+							<dt className="w-28 shrink-0 opacity-70 wrap-break-word">{label}</dt>
+							<dd className="min-w-0 flex-1 wrap-break-word">{value}</dd>
+						</div>
+					))}
+				</dl>
+			)}
+		</div>
+	);
 }
 
 export function MessageView({ message, folder, onDelete, onStar, onSpam, onBack, t }: Readonly<Props>) {
@@ -90,12 +181,7 @@ export function MessageView({ message, folder, onDelete, onStar, onSpam, onBack,
 	const meta = (
 		<div className="min-w-0 flex-1">
 			<h2 className="text-lg font-semibold wrap-break-word">{message.subject || t("list.noSubject")}</h2>
-			<p className="text-sm opacity-70 wrap-break-word">
-				{t("view.from")}: {addressLine([message.from])}
-			</p>
-			<p className="text-sm opacity-70 wrap-break-word">
-				{t("view.to")}: {addressLine(message.to)}
-			</p>
+			<AddressBlock message={message} t={t} />
 			{message.scheduledAt && (
 				<p className="text-sm text-primary">
 					{t("view.scheduled")}: {new Date(message.scheduledAt).toLocaleString()}
