@@ -119,7 +119,7 @@ export default function BlocklistView({ t, embedded = false }: Readonly<Props>) 
 							aria-label={t("blocklist.remove")}
 							title={t("blocklist.remove")}
 							onClick={() => remove(rule)}
-							className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-danger lg:h-8 lg:w-8"
+							className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-tdanger lg:h-8 lg:w-8"
 						>
 							<adc-icon-trash size="1rem" />
 						</button>

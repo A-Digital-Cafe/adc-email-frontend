@@ -61,7 +61,7 @@ export function AttachmentPreviewModal({ attachment, onClose, t }: Readonly<Prop
 
 	let body: React.ReactNode;
 	if (failed || !kind) {
-		body = <p className="text-danger text-sm py-8 text-center">{t("view.previewError")}</p>;
+		body = <p className="text-tdanger text-sm py-8 text-center">{t("view.previewError")}</p>;
 	} else if (kind === "text") {
 		body =
 			text === null ? (

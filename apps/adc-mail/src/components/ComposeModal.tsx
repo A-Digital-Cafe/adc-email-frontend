@@ -175,7 +175,7 @@ export function ComposeModal({ draft, policy, onClose, t }: Readonly<Props>) {
 						aria-describedby="compose-to-help"
 						className={`rounded-lg border px-3 py-2 ${blockedRecipients.length > 0 ? "border-danger" : "border-text/15"}`}
 					/>
-					<span id="compose-to-help" className={blockedRecipients.length > 0 ? "text-sm text-danger" : "text-xs opacity-70"}>
+					<span id="compose-to-help" className={blockedRecipients.length > 0 ? "text-sm text-tdanger" : "text-xs opacity-70"}>
 						{blockedRecipients.length > 0
 							? t("compose.externalBlocked", { addresses: blockedRecipients.join(", ") })
 							: policy?.internalOnly && t("compose.internalOnlyHint", { domain: policy.rootDomain })}

@@ -70,7 +70,7 @@ export function MessageList({
 		<>
 			{emptiable && onEmptyFolder && (
 				<div className="flex justify-end border-b border-text/10 px-4 py-2">
-					<button type="button" className="text-sm text-danger underline-offset-2 hover:underline" onClick={onEmptyFolder}>
+					<button type="button" className="text-sm text-tdanger underline-offset-2 hover:underline" onClick={onEmptyFolder}>
 						{t(`list.empty${folder === "trash" ? "Trash" : "Spam"}Action`)}
 					</button>
 				</div>
@@ -107,7 +107,7 @@ export function MessageList({
 											aria-pressed={message.starred ? "true" : "false"}
 											title={t("actions.star")}
 											className={`inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full hover:bg-text/10 lg:h-8 lg:w-8 ${
-												message.starred ? "text-warn" : "text-muted"
+												message.starred ? "text-twarn" : "text-muted"
 											}`}
 											onClick={(e) => {
 												e.stopPropagation();
@@ -132,7 +132,7 @@ export function MessageList({
 											type="button"
 											aria-label={t("actions.delete")}
 											title={t("actions.delete")}
-											className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-danger lg:h-8 lg:w-8"
+											className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-muted hover:bg-text/10 hover:text-tdanger lg:h-8 lg:w-8"
 											onClick={(e) => {
 												e.stopPropagation();
 												onDelete(message);

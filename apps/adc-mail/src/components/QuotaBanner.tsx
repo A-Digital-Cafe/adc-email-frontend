@@ -31,7 +31,7 @@ export function QuotaBanner({ account, t }: Readonly<Props>) {
 				<span className="truncate font-medium">{account.account.address}</span>
 			</div>
 			<div className="flex min-w-0 items-center gap-2">
-				<span className={`truncate ${nearFull ? "text-danger" : "opacity-70"}`}>
+				<span className={`truncate ${nearFull ? "text-tdanger" : "opacity-70"}`}>
 					{t("quota.storage")}: {formatBytes(used)} / {formatBytes(total)}
 				</span>
 				<div className="h-2 w-20 shrink-0 overflow-hidden rounded-full bg-alt sm:w-32">
