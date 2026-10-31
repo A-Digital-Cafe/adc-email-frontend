@@ -265,8 +265,8 @@ export default function App() {
 	}));
 
 	return (
-		// `fullWidth`: sin él el contenedor de `adc-layout` es `xl:w-max` (se ajusta al
-		// contenido), así que una línea larga de un correo ensancha la página entera.
+		// `fullWidth`: sin él el contenedor de `adc-layout` se cappea en `xl:max-w-7xl`,
+		// muy angosto para sidebar + lista + panel de lectura en simultáneo.
 		// `mobile-menu`: en mobile el logo del header abre el drawer de carpetas.
 		<adc-layout ref={layoutRef} fullWidth mobile-menu mobile-menu-open={sidebarExpanded || undefined} mobile-menu-label={t("nav.menu")}>
 			<div className="flex bg-background">
